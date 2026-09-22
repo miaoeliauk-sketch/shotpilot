@@ -1,0 +1,145 @@
+import type {
+  AudioKind, BrollNeed, CameraAngle, CameraMove, Composition,
+  FocalLength, Lighting, RollKind, ShotSize, Transition,
+} from './vocabulary.js';
+
+/** 存盘格式版本。破坏性改动时 +1，并在 project.ts 里加迁移。 */
+export const PROJECT_VERSION = 1;
+
+export interface SourceMedia {
+  /** 原始视频的绝对路径。视频不复制进项目目录，只引用。 */
+  path: string;
+  filename: string;
+  /** 秒 */
+  duration: number;
+  width: number;
+  height: number;
+  fps: number;
+  hasAudio: boolean;
+  /** 字节 */
+  size: number;
+  /** ffprobe 原始字段，留着以备后续需要而不用重新探测 */
+  container?: string;
+  videoCodec?: string;
+  audioCodec?: string;
+}
+
+/**
+ * 逐词转写。时间戳是词级的，这是能和 hypit 对齐的关键：
+ * hypit 的 SVML 把元素锚定在词上而不是秒上，所以词级时间戳是硬需求，
+ * 句级字幕（普通 SRT）喂过去会丢掉 reflow 能力。
+ */
+export interface Word {
+  text: string;
+  /** 秒 */
+  start: number;
+  end: number;
+  /** ASR 置信度 0–1，缺失表示未知 */
+  confidence?: number;
+  /** 说话人标识，做了分离才有 */
+  speaker?: string;
+}
+
+export interface AudioSegment {
+  start: number;
+  end: number;
+  kind: AudioKind;
+  /** 平均响度 dBFS，用于界面画能量条 */
+  loudness?: number;
+  /** 人工或识别出的曲目名/描述 */
+  label?: string;
+}
+
+export interface AudioAnalysis {
+  segments: AudioSegment[];
+  /** 检测到的节拍点（秒），用于对齐卡点剪辑 */
+  beats: number[];
+  /** 估算 BPM，无音乐时为 null */
+  bpm: number | null;
+  /** 分析用的方法，写清楚以免日后分不清数据是怎么来的 */
+  method: string;
+}
+
+/** 一个镜头上的结构化标注。全部可空——没标 ≠ 标了"无"。 */
+export interface ShotAnnotation {
+  shotSize?: ShotSize;
+  cameraMove?: CameraMove;
+  /** 构图可叠加，比如「三分法 + 留白」 */
+  composition?: Composition[];
+  focalLength?: FocalLength;
+  /** 需要精确值时填，和 focalLength 档位并存 */
+  focalLengthMm?: number;
+  lighting?: Lighting[];
+  angle?: CameraAngle;
+  transitionIn?: Transition;
+  brollNeed?: BrollNeed;
+}
+
+/**
+ * 标注的来源。区分人工和 AI 是刚需：
+ * AI 初判可以批量覆盖，人工改过的绝不能被下一轮 AI 覆盖掉。
+ */
+export type AnnotationSource = 'manual' | 'ai' | 'ai-edited';
+
+export interface Shot {
+  /** 稳定 id，形如 s001。重新切分时保留人工标注靠它对齐。 */
+  id: string;
+  index: number;
+  /** 秒 */
+  start: number;
+  end: number;
+  /** 相对项目目录的缩略图路径 */
+  thumbnail?: string;
+  roll: RollKind;
+  annotation: ShotAnnotation;
+  /** 每个维度各自的来源，粒度到字段，这样 AI 只覆盖它自己填的 */
+  annotationSource: Partial<Record<keyof ShotAnnotation, AnnotationSource>>;
+  /** AI 初判的置信度，字段级 */
+  aiConfidence?: Partial<Record<keyof ShotAnnotation, number>>;
+  /** 用到的特效，自由 tag（特效名目太杂，不做枚举） */
+  effects: string[];
+  /** 画面里的元素/道具，自由 tag */
+  elements: string[];
+  /** 逐镜备注——逐字稿里明确要的「针对每个分镜进行备注标注」 */
+  note: string;
+  /** B-roll 的具体内容描述，服务于后续复刻 */
+  brollContent?: string;
+  /** 是否人工确认过。批量 AI 标注后用来筛未审的镜头。 */
+  reviewed: boolean;
+}
+
+export interface ReelProject {
+  version: number;
+  id: string;
+  title: string;
+  source: SourceMedia;
+  shots: Shot[];
+  words: Word[];
+  audio: AudioAnalysis | null;
+  /** 整片级别的备注 */
+  note: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 落在某镜头时间范围内的词。B-roll 拆解和 SVML 导出都要用。 */
+export function wordsInShot(project: ReelProject, shot: Shot): Word[] {
+  return project.words.filter((w) => w.start < shot.end && w.end > shot.start);
+}
+
+/** 镜头的口播文本 */
+export function shotText(project: ReelProject, shot: Shot): string {
+  return wordsInShot(project, shot).map((w) => w.text).join('').trim();
+}
+
+export function shotDuration(shot: Shot): number {
+  return Math.max(0, shot.end - shot.start);
+}
+
+/** 秒 → mm:ss.S，界面和导出统一走这个，避免各处格式不一 */
+export function formatTime(seconds: number): string {
+  const safe = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
+  const m = Math.floor(safe / 60);
+  const s = safe - m * 60;
+  return `${String(m).padStart(2, '0')}:${s.toFixed(1).padStart(4, '0')}`;
+}

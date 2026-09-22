@@ -1,0 +1,24 @@
+{
+  "name": "shotpilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "拉片工作台：自动分镜切分、逐词字幕、BGM 识别与结构化标注，产出可喂给 hypit 的 SVML",
+  "engines": { "node": ">=22.15" },
+  "scripts": {
+    "dev": "tsx src/server/index.ts",
+    "analyze": "tsx src/cli.ts",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "ffprobe-static": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.23.1",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.8"
+  }
+}

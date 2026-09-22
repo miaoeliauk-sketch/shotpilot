@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+# 拉片工作区：视频、抽帧、音频轨等大文件不入库
+projects/
+*.mp4
+*.mov
+*.wav
