@@ -32,3 +32,18 @@ describe('vocabulary', () => {
     expect(isValidTerm('lighting', 'backlight')).toBe(false);
   });
 });
+
+describe('保留键', () => {
+  // S = 补刀，M = 合并。这两个是结构编辑，在键盘处理里排在词汇表之前，
+  // 词汇表若占用它们，那条标注就会永远点不到——静默失效，很难察觉。
+  const RESERVED = ['s', 'm'];
+
+  it('词汇表不得占用 S / M', () => {
+    for (const dim of DIMENSIONS) {
+      for (const term of dim.terms) {
+        if (!('key' in term) || !term.key) continue;
+        expect(RESERVED, `${dim.label}「${term.label}」占用了保留键 ${term.key}`).not.toContain(term.key);
+      }
+    }
+  });
+});

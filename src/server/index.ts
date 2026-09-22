@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyzeVideo, resplit } from '../analyze/pipeline.js';
+import { mergeWithPrevious, splitShot } from '../analyze/shots.js';
+import { generateThumbnailFor } from '../analyze/thumbnails.js';
 import { autoAnnotate, visionConfigFromEnv } from '../analyze/vision.js';
 import { checkToolchain } from '../analyze/ffmpeg.js';
 import { listProjects, loadProject, saveProject, thumbsDir } from '../core/project.js';
@@ -249,6 +251,38 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     project.shots[index] = applyShotPatch(project.shots[index] as Shot, patch);
     await saveProject(project);
     sendJson(res, 200, project.shots[index]);
+    return true;
+  }
+
+  // POST /api/projects/:id/shots/:shotId/split  —— 在播放位置手动补一刀
+  if (parts[3] === 'shots' && parts[4] && parts[5] === 'split' && req.method === 'POST') {
+    const body = (await readBody(req)) as Record<string, unknown>;
+    const time = typeof body.time === 'number' ? body.time : NaN;
+    try {
+      project.shots = splitShot(project.shots, parts[4], time);
+      // 只为新出现的那一半抽帧，整片重跑没必要
+      const fresh = project.shots.find((s) => Math.abs(s.start - time) < 1e-6);
+      if (fresh) {
+        const withThumb = await generateThumbnailFor(project.source.path, fresh, thumbsDir(id));
+        project.shots = project.shots.map((s) => (s.id === withThumb.id ? withThumb : s));
+      }
+      await saveProject(project);
+      sendJson(res, 200, { shots: project.shots });
+    } catch (err) {
+      sendError(res, 400, err instanceof Error ? err.message : '拆分失败');
+    }
+    return true;
+  }
+
+  // POST /api/projects/:id/shots/:shotId/merge  —— 并入上一个镜头
+  if (parts[3] === 'shots' && parts[4] && parts[5] === 'merge' && req.method === 'POST') {
+    try {
+      project.shots = mergeWithPrevious(project.shots, parts[4]);
+      await saveProject(project);
+      sendJson(res, 200, { shots: project.shots });
+    } catch (err) {
+      sendError(res, 400, err instanceof Error ? err.message : '合并失败');
+    }
     return true;
   }
 

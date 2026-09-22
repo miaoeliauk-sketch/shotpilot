@@ -25,6 +25,14 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(patch),
     }),
+  splitShot: (id, shotId, time) =>
+    request(`/api/projects/${id}/shots/${shotId}/split`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ time }),
+    }),
+  mergeShot: (id, shotId) =>
+    request(`/api/projects/${id}/shots/${shotId}/merge`, { method: 'POST' }),
   resplit: (id, opts) =>
     request(`/api/projects/${id}/resplit`, {
       method: 'POST',

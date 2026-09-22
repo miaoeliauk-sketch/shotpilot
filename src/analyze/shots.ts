@@ -163,3 +163,81 @@ export function carryOverAnnotations(oldShots: Shot[], newShots: Shot[]): Shot[]
     };
   });
 }
+
+/**
+ * 重排镜头编号与序号。
+ *
+ * 手动拆分/合并之后必须跑一遍，否则胶片条上会出现 s007、s007、s008 这种重复编号。
+ * 缩略图按起始时间命名（见 thumbnails.ts），所以重排 id 不需要动任何文件。
+ */
+export function renumber(shots: Shot[]): Shot[] {
+  return [...shots]
+    .sort((a, b) => a.start - b.start)
+    .map((shot, index) => ({ ...shot, index, id: `s${String(index + 1).padStart(3, '0')}` }));
+}
+
+/** 手动补刀/合并的最小镜头长度。比自动切分的 0.4 更宽松——人工是有意为之，不该被拦。 */
+export const MIN_MANUAL_SHOT = 0.1;
+
+/**
+ * 在指定时间把一个镜头拆成两个。
+ *
+ * 场景检测永远抓不到"同一个人、同一个背景、只换了机位"这类切换，
+ * 而调低阈值只会让别处切碎。手动补刀才是正解：自动切 90%，剩下 10% 人补。
+ *
+ * 标注归属规则：**前半段保留全部标注和已审状态，后半段只继承 A/B-roll 归类**。
+ * 理由是你发现漏刀时，之前标的那些描述的是你当时看到的画面，也就是前半段；
+ * 而 A/B-roll 归类跨越整段大概率不变，继承下来能省一次按键。
+ */
+export function splitShot(shots: Shot[], shotId: string, time: number): Shot[] {
+  const target = shots.find((s) => s.id === shotId);
+  if (!target) throw new Error(`镜头不存在：${shotId}`);
+  if (!Number.isFinite(time)) throw new Error(`切分时间无效：${time}`);
+  if (time - target.start < MIN_MANUAL_SHOT || target.end - time < MIN_MANUAL_SHOT) {
+    throw new Error(
+      `切分点离镜头边界太近（需要距两端各至少 ${MIN_MANUAL_SHOT} 秒）。` +
+      `当前镜头 ${target.start.toFixed(2)}–${target.end.toFixed(2)}，切分点 ${time.toFixed(2)}`,
+    );
+  }
+
+  const first: Shot = { ...target, end: time };
+  const second: Shot = {
+    ...emptyShot(0, time, target.end),
+    // 归类大概率跨段不变，继承下来省一次按键；其余标注留空等人工确认
+    roll: target.roll,
+  };
+
+  const next = shots.flatMap((s) => (s.id === shotId ? [first, second] : [s]));
+  return renumber(next);
+}
+
+/**
+ * 把一个镜头并入它前面那个（撤销多余的刀）。
+ *
+ * 前一个镜头是合并后的"头"，保留它的标注；被并入的那个只把
+ * 元素、特效、备注这些累加性的信息带过去，不覆盖已有判断。
+ */
+export function mergeWithPrevious(shots: Shot[], shotId: string): Shot[] {
+  const index = shots.findIndex((s) => s.id === shotId);
+  if (index === -1) throw new Error(`镜头不存在：${shotId}`);
+  if (index === 0) throw new Error('第一个镜头前面没有镜头可以合并');
+
+  const prev = shots[index - 1] as Shot;
+  const current = shots[index] as Shot;
+
+  const merged: Shot = {
+    ...prev,
+    end: current.end,
+    // 累加性信息合并去重；判断性标注（景别/运镜等）以前一个为准，不被覆盖
+    elements: [...new Set([...prev.elements, ...current.elements])],
+    effects: [...new Set([...prev.effects, ...current.effects])],
+    note: [prev.note, current.note].map((n) => n.trim()).filter(Boolean).join('\n'),
+    brollContent: prev.brollContent || current.brollContent,
+    // 边界变了，之前的"已审"不再成立
+    reviewed: false,
+  };
+
+  const next = shots.filter((_, i) => i !== index - 1 && i !== index);
+  next.splice(index - 1, 0, merged);
+  return renumber(next);
+}

@@ -51,7 +51,7 @@ export const CAMERA_MOVES = [
 /** 构图 */
 export const COMPOSITIONS = [
   { value: 'center', label: '中心构图', key: 'a' },
-  { value: 'rule-of-thirds', label: '三分法', key: 's' },
+  { value: 'rule-of-thirds', label: '三分法', key: ';' },
   { value: 'symmetry', label: '对称', key: 'd' },
   { value: 'frame-in-frame', label: '框中框', key: 'f' },
   { value: 'leading-lines', label: '引导线', key: 'g' },

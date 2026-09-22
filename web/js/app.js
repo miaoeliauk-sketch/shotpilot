@@ -159,7 +159,7 @@ function renderWorkbench() {
         <div class="transport">
           <span class="time" id="clock">00:00.0</span>
           <span class="grow"></span>
-          <span class="meta">空格 播放/暂停　←→ 切镜头　Enter 标记已审并下一个　数字/字母 见右侧标注</span>
+          <span class="meta">空格 播放/暂停　←→ 切镜头　<b>S 当前位置补刀</b>　<b>M 并入上一个</b>　Enter 已审并下一个</span>
         </div>
       </div>
       <div class="strip"><div class="filmstrip" id="strip"></div></div>
@@ -358,6 +358,50 @@ function selectShot(index) {
   renderSide();
 }
 
+/* ------------------------------------------------------- 手动补刀 */
+
+/**
+ * 在当前播放位置把当前镜头切成两半。
+ * 场景检测抓不到「同一个人、同一背景、只换机位」的切换，这是唯一的补救手段。
+ */
+async function splitAtPlayhead() {
+  const shot = activeShot();
+  if (!shot || !state.video) return;
+  const time = state.video.currentTime;
+  if (time <= shot.start || time >= shot.end) {
+    return toast(`播放位置不在当前镜头范围内（${fmt(shot.start)}–${fmt(shot.end)}）`);
+  }
+  try {
+    const r = await api.splitShot(state.project.id, shot.id, time);
+    state.project.shots = r.shots;
+    // 停在切出来的后半段：你按 S 就是因为发现这里换画面了，下一步多半要标它
+    const next = r.shots.findIndex((x) => Math.abs(x.start - time) < 0.05);
+    state.activeIndex = next === -1 ? state.activeIndex : next;
+    renderStrip();
+    renderSide();
+    toast(`已在 ${fmt(time)} 补刀，现在 ${r.shots.length} 个镜头`);
+  } catch (err) {
+    toast(`补刀失败：${err.message}`);
+  }
+}
+
+/** 把当前镜头并入上一个，撤销多余的刀。 */
+async function mergeIntoPrevious() {
+  const shot = activeShot();
+  if (!shot) return;
+  if (state.activeIndex === 0) return toast('第一个镜头前面没有镜头可以合并');
+  try {
+    const r = await api.mergeShot(state.project.id, shot.id);
+    state.project.shots = r.shots;
+    state.activeIndex = Math.max(0, state.activeIndex - 1);
+    renderStrip();
+    renderSide();
+    toast(`已合并，现在 ${r.shots.length} 个镜头`);
+  } catch (err) {
+    toast(`合并失败：${err.message}`);
+  }
+}
+
 /* ------------------------------------------------------- 批量操作 */
 
 async function doResplit() {
@@ -421,8 +465,14 @@ document.addEventListener('keydown', (e) => {
     return selectShot(state.activeIndex + 1);
   }
 
-  // 词汇表快捷键
   const key = e.key.toLowerCase();
+
+  // 结构编辑优先于标注：S/M 必须在词汇表查找之前处理，
+  // 否则 S 会被构图的「三分法」抢走
+  if (key === 's') { e.preventDefault(); return void splitAtPlayhead(); }
+  if (key === 'm') { e.preventDefault(); return void mergeIntoPrevious(); }
+
+  // 词汇表快捷键
   for (const dim of state.dimensions) {
     const term = dim.terms.find((t) => t.key === key);
     if (term) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildShots, carryOverAnnotations, emptyShot } from '../src/analyze/shots.js';
+import { buildShots, carryOverAnnotations, emptyShot, mergeWithPrevious, splitShot } from '../src/analyze/shots.js';
 import type { Shot } from '../src/core/types.js';
 
 describe('buildShots', () => {
@@ -59,5 +59,88 @@ describe('carryOverAnnotations', () => {
   it('旧项目没有任何标注时原样返回', () => {
     const newShots = [emptyShot(0, 0, 5)];
     expect(carryOverAnnotations([emptyShot(0, 0, 5)], newShots)).toBe(newShots);
+  });
+});
+
+describe('splitShot', () => {
+  const base = () => [
+    { ...emptyShot(0, 0, 10), roll: 'a-roll' as const, note: '原备注', reviewed: true, annotation: { shotSize: 'medium' as const } },
+    emptyShot(1, 10, 20),
+  ];
+
+  it('在指定时间切成两段，边界首尾相接', () => {
+    const out = splitShot(base(), 's001', 4);
+    expect(out).toHaveLength(3);
+    expect(out.map((s) => [s.start, s.end])).toEqual([[0, 4], [4, 10], [10, 20]]);
+  });
+
+  it('切完重排编号，不出现重复 id', () => {
+    const out = splitShot(base(), 's001', 4);
+    expect(out.map((s) => s.id)).toEqual(['s001', 's002', 's003']);
+    expect(out.map((s) => s.index)).toEqual([0, 1, 2]);
+  });
+
+  it('前半段保留全部标注和已审状态', () => {
+    const out = splitShot(base(), 's001', 4);
+    expect(out[0]).toMatchObject({ note: '原备注', reviewed: true, roll: 'a-roll' });
+    expect(out[0]?.annotation.shotSize).toBe('medium');
+  });
+
+  it('后半段只继承 A/B-roll 归类，其余留空待确认', () => {
+    const out = splitShot(base(), 's001', 4);
+    expect(out[1]?.roll).toBe('a-roll');
+    expect(out[1]?.note).toBe('');
+    expect(out[1]?.reviewed).toBe(false);
+    expect(out[1]?.annotation).toEqual({});
+  });
+
+  it('切分点贴着边界时报错而不是造出零长镜头', () => {
+    expect(() => splitShot(base(), 's001', 0.01)).toThrow(/太近/);
+    expect(() => splitShot(base(), 's001', 9.99)).toThrow(/太近/);
+  });
+
+  it('镜头不存在或时间非法时报错', () => {
+    expect(() => splitShot(base(), 's999', 4)).toThrow(/不存在/);
+    expect(() => splitShot(base(), 's001', NaN)).toThrow(/无效/);
+  });
+});
+
+describe('mergeWithPrevious', () => {
+  const base = () => [
+    { ...emptyShot(0, 0, 5), roll: 'a-roll' as const, note: '前', elements: ['话筒'], annotation: { shotSize: 'close' as const } },
+    { ...emptyShot(1, 5, 12), roll: 'b-roll' as const, note: '后', elements: ['产品'], reviewed: true, annotation: { shotSize: 'wide' as const } },
+    emptyShot(2, 12, 20),
+  ];
+
+  it('并入上一个镜头并接管时间范围', () => {
+    const out = mergeWithPrevious(base(), 's002');
+    expect(out).toHaveLength(2);
+    expect(out.map((s) => [s.start, s.end])).toEqual([[0, 12], [12, 20]]);
+  });
+
+  it('判断性标注以前一个为准，不被后一个覆盖', () => {
+    const out = mergeWithPrevious(base(), 's002');
+    expect(out[0]?.roll).toBe('a-roll');
+    expect(out[0]?.annotation.shotSize).toBe('close');
+  });
+
+  it('累加性信息合并去重', () => {
+    const out = mergeWithPrevious(base(), 's002');
+    expect(out[0]?.elements).toEqual(['话筒', '产品']);
+    expect(out[0]?.note).toBe('前\n后');
+  });
+
+  it('边界变了就撤销已审状态', () => {
+    const out = mergeWithPrevious(base(), 's002');
+    expect(out[0]?.reviewed).toBe(false);
+  });
+
+  it('第一个镜头无法向前合并', () => {
+    expect(() => mergeWithPrevious(base(), 's001')).toThrow(/第一个镜头/);
+  });
+
+  it('合并后重排编号', () => {
+    const out = mergeWithPrevious(base(), 's002');
+    expect(out.map((s) => s.id)).toEqual(['s001', 's002']);
   });
 });

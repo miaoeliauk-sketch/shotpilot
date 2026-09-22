@@ -3,6 +3,17 @@ import { join } from 'node:path';
 import { FFMPEG, runOrThrow } from './ffmpeg.js';
 import type { Shot } from '../core/types.js';
 
+/**
+ * 缩略图文件名按镜头**起始时间**生成，而不是镜头 id。
+ *
+ * 手动拆分/合并之后 id 会整体重排（s007 拆开后，后面所有镜头的编号都要往后挪），
+ * 若用 id 命名就得跟着重命名一串文件，还要处理 s008→s009 覆盖 s009 这类碰撞。
+ * 用起始时间命名则完全无关——镜头边界没变，文件就不用动。
+ */
+export function thumbnailName(shot: Shot): string {
+  return `t${Math.round(shot.start * 1000)}.jpg`;
+}
+
 export interface ThumbnailOptions {
   /** 缩略图宽度，高度按比例。240 在时间线上够看又不撑爆内存。 */
   width?: number;
@@ -41,7 +52,7 @@ export async function generateThumbnails(
       const shot = queue.shift();
       if (!shot) return;
       const seek = shot.start + (shot.end - shot.start) * position;
-      const name = `${shot.id}.jpg`;
+      const name = thumbnailName(shot);
       try {
         await runOrThrow(FFMPEG, [
           '-hide_banner', '-nostats', '-loglevel', 'error',
@@ -65,4 +76,16 @@ export async function generateThumbnails(
     const thumb = results.get(s.id);
     return thumb ? { ...s, thumbnail: thumb } : s;
   });
+}
+
+
+/** 只为一个镜头抽帧。手动拆分后只有新出现的那半边需要，没必要整片重跑。 */
+export async function generateThumbnailFor(
+  videoPath: string,
+  shot: Shot,
+  outputDir: string,
+  opts: ThumbnailOptions = {},
+): Promise<Shot> {
+  const [updated] = await generateThumbnails(videoPath, [shot], outputDir, opts);
+  return updated ?? shot;
 }
