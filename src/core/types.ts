@@ -81,6 +81,29 @@ export interface ShotAnnotation {
  */
 export type AnnotationSource = 'manual' | 'ai' | 'ai-edited';
 
+/**
+ * 可替换槽位。
+ *
+ * 这是「复刻」和「预设」的分界线：
+ *   - 只复刻 = 把这条视频重做一遍，用完就扔
+ *   - 标出槽位 = 区分开「结构」（构图、运动节奏、图层关系）和「内容」（这行字、这张图），
+ *     换掉槽位内容就是下一条视频，花一次时间能一直复用
+ *
+ * 结构留在 Remotion 代码里，槽位是代码里暴露出来的 props。
+ */
+export interface Slot {
+  id: string;
+  kind: SlotKind;
+  /** 这个槽位是什么，写给人和 agent 看，例如「主标题」「背景图」「强调色」 */
+  label: string;
+  /** 原片里这个位置的内容。复刻时当参照，换内容时当对照。 */
+  originalValue?: string;
+  /** 额外约束，例如「最多 12 字，超了会撞到右边的图」 */
+  constraint?: string;
+}
+
+export type SlotKind = 'text' | 'image' | 'video' | 'color' | 'number';
+
 export interface Shot {
   /** 稳定 id，形如 s001。重新切分时保留人工标注靠它对齐。 */
   id: string;
@@ -106,6 +129,10 @@ export interface Shot {
   brollContent?: string;
   /** 是否人工确认过。批量 AI 标注后用来筛未审的镜头。 */
   reviewed: boolean;
+  /** 复刻时哪些元素是可替换的。只对打算复刻的镜头（B-roll/叠加层/字卡）才有意义。 */
+  slots?: Slot[];
+  /** 这个镜头是否要复刻。挑出来做复刻包时用它筛选。 */
+  replicate?: boolean;
 }
 
 export interface ReelProject {

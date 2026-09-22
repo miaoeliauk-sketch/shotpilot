@@ -4,12 +4,16 @@
   "private": true,
   "type": "module",
   "description": "拉片工作台：自动分镜切分、逐词字幕、BGM 识别与结构化标注，产出可喂给 hypit 的 SVML",
-  "engines": { "node": ">=22.15" },
+  "engines": {
+    "node": ">=22.15"
+  },
   "scripts": {
     "dev": "tsx src/server/index.ts",
     "analyze": "tsx src/cli.ts",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "replica": "tsx src/replica-cli.ts",
+    "compare": "tsx src/compare-cli.ts"
   },
   "dependencies": {
     "ffmpeg-static": "^5.2.0",
