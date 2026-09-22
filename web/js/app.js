@@ -244,7 +244,8 @@ function renderSide() {
       <span class="t">${(shot.end - shot.start).toFixed(2)}s</span>
     </div>
     <div class="hint">${shot.index + 1} / ${state.project.shots.length}</div>
-    ${text ? `<div class="quote">${esc(text)}</div>` : '<div class="hint">这个镜头没有口播（或未做转写）</div>'}`;
+    ${text ? `<div class="quote">${esc(text)}</div>` : '<div class="hint">这个镜头没有口播（或未做转写）</div>'}
+    <div class="group"><h3>备注</h3><textarea id="note" placeholder="为什么这么拍？学到什么？">${esc(shot.note)}</textarea></div>`;
 
   for (const dim of state.dimensions) {
     const current = dim.field === 'roll' ? shot.roll : shot.annotation[dim.field];
@@ -263,7 +264,6 @@ function renderSide() {
     <div class="group"><h3>元素（逗号分隔）</h3><input id="elements" value="${esc(shot.elements.join('，'))}"></div>
     <div class="group"><h3>特效（逗号分隔）</h3><input id="effects" value="${esc(shot.effects.join('，'))}"></div>
     <div class="group"><h3>B-roll 内容</h3><input id="brollContent" value="${esc(shot.brollContent ?? '')}" placeholder="复刻时这里要放什么画面"></div>
-    <div class="group"><h3>备注</h3><textarea id="note" placeholder="为什么这么拍？学到什么？">${esc(shot.note)}</textarea></div>
     <div class="group"><button class="primary" id="btnReview" style="width:100%">${shot.reviewed ? '✓ 已审（点击取消）' : '标记已审并下一个 (Enter)'}</button></div>`;
 
   side.innerHTML = html;
