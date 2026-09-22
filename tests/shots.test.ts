@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildShots, carryOverAnnotations, emptyShot, mergeWithPrevious, splitShot } from '../src/analyze/shots.js';
+import { buildShots, carryOverAnnotations, emptyShot, mergeWithPrevious, splitShot, splitShotByCuts } from '../src/analyze/shots.js';
 import type { Shot } from '../src/core/types.js';
 
 describe('buildShots', () => {
@@ -142,5 +142,53 @@ describe('mergeWithPrevious', () => {
   it('合并后重排编号', () => {
     const out = mergeWithPrevious(base(), 's002');
     expect(out.map((s) => s.id)).toEqual(['s001', 's002']);
+  });
+});
+
+describe('splitShotByCuts', () => {
+  const base = () => [
+    { ...emptyShot(0, 0, 5), roll: 'a-roll' as const, note: '前面的镜头' },
+    { ...emptyShot(1, 5, 40), roll: 'b-roll' as const, note: '录屏演示段', annotation: { shotSize: 'insert' as const } },
+  ];
+
+  it('按检测到的切点把镜头切成多段', () => {
+    const out = splitShotByCuts(base(), 's002', [
+      { time: 12, score: 0.09 }, { time: 20, score: 0.07 }, { time: 31, score: 0.06 },
+    ]);
+    expect(out.map((s) => [s.start, s.end])).toEqual([[0, 5], [5, 12], [12, 20], [20, 31], [31, 40]]);
+  });
+
+  it('忽略落在目标镜头之外的切点', () => {
+    const out = splitShotByCuts(base(), 's002', [
+      { time: 2, score: 0.5 }, { time: 12, score: 0.09 }, { time: 99, score: 0.5 },
+    ]);
+    expect(out).toHaveLength(3);
+    expect(out.map((s) => [s.start, s.end])).toEqual([[0, 5], [5, 12], [12, 40]]);
+  });
+
+  it('首段保留原标注，后续段只继承归类', () => {
+    const out = splitShotByCuts(base(), 's002', [{ time: 12, score: 0.09 }]);
+    expect(out[1]).toMatchObject({ note: '录屏演示段', roll: 'b-roll' });
+    expect(out[1]?.annotation.shotSize).toBe('insert');
+    expect(out[2]).toMatchObject({ note: '', roll: 'b-roll', reviewed: false });
+    expect(out[2]?.annotation).toEqual({});
+  });
+
+  it('一个切点都没有时原样返回，不动结构', () => {
+    const shots = base();
+    expect(splitShotByCuts(shots, 's002', [])).toBe(shots);
+    expect(splitShotByCuts(shots, 's002', [{ time: 100, score: 1 }])).toBe(shots);
+  });
+
+  it('挤在一起的切点只保留够间隔的，不切出碎片', () => {
+    const out = splitShotByCuts(base(), 's002', [
+      { time: 12, score: 0.1 }, { time: 12.02, score: 0.1 }, { time: 12.04, score: 0.1 },
+    ]);
+    expect(out).toHaveLength(3);
+  });
+
+  it('切完重排编号', () => {
+    const out = splitShotByCuts(base(), 's002', [{ time: 12, score: 0.09 }, { time: 20, score: 0.07 }]);
+    expect(out.map((s) => s.id)).toEqual(['s001', 's002', 's003', 's004']);
   });
 });

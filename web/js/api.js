@@ -31,6 +31,12 @@ export const api = {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ time }),
     }),
+  autoSplitShot: (id, shotId, threshold) =>
+    request(`/api/projects/${id}/shots/${shotId}/autosplit`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ threshold }),
+    }),
   mergeShot: (id, shotId) =>
     request(`/api/projects/${id}/shots/${shotId}/merge`, { method: 'POST' }),
   resplit: (id, opts) =>

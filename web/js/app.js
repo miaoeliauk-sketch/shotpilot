@@ -264,6 +264,7 @@ function renderSide() {
     <div class="group"><h3>元素（逗号分隔）</h3><input id="elements" value="${esc(shot.elements.join('，'))}"></div>
     <div class="group"><h3>特效（逗号分隔）</h3><input id="effects" value="${esc(shot.effects.join('，'))}"></div>
     <div class="group"><h3>B-roll 内容</h3><input id="brollContent" value="${esc(shot.brollContent ?? '')}" placeholder="复刻时这里要放什么画面"></div>
+    <div class="group"><button id="btnAutoSplit" style="width:100%">在此镜头内细切（降低阈值重测）</button></div>
     <div class="group"><button class="primary" id="btnReview" style="width:100%">${shot.reviewed ? '✓ 已审（点击取消）' : '标记已审并下一个 (Enter)'}</button></div>`;
 
   side.innerHTML = html;
@@ -275,6 +276,7 @@ function renderSide() {
     const el = side.querySelector(`#${id}`);
     el.oninput = () => queueSave();
   }
+  side.querySelector('#btnAutoSplit').onclick = autoSplitCurrent;
   side.querySelector('#btnReview').onclick = () => {
     const s = activeShot();
     patchShot({ reviewed: !s.reviewed });
@@ -386,6 +388,37 @@ async function splitAtPlayhead() {
 }
 
 /** 把当前镜头并入上一个，撤销多余的刀。 */
+/**
+ * 只对当前镜头用更低阈值重新检测。
+ * 录屏演示这类内容的场景分数比口播低一个数量级，全局阈值顾此失彼，
+ * 只能对选中的段落单独调。
+ */
+async function autoSplitCurrent() {
+  const shot = activeShot();
+  if (!shot) return;
+  const input = prompt(
+    `只对 ${shot.id}（${fmt(shot.start)}–${fmt(shot.end)}）重新检测。\n` +
+    '录屏/图文演示建议 0.05–0.08，真人画面建议 0.15–0.25。',
+    '0.08',
+  );
+  if (input === null) return;
+  const threshold = Number(input);
+  if (!Number.isFinite(threshold) || threshold <= 0 || threshold >= 1) return toast('阈值要在 0 和 1 之间');
+
+  toast('检测中…');
+  try {
+    const r = await api.autoSplitShot(state.project.id, shot.id, threshold);
+    state.project.shots = r.shots;
+    renderStrip();
+    renderSide();
+    toast(r.added > 0
+      ? `切出 ${r.added} 个新镜头，现在共 ${r.shots.length} 个`
+      : `阈值 ${threshold} 下没找到切点，再调低试试`);
+  } catch (err) {
+    toast(`局部重切失败：${err.message}`);
+  }
+}
+
 async function mergeIntoPrevious() {
   const shot = activeShot();
   if (!shot) return;

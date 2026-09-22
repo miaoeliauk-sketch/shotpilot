@@ -2,6 +2,10 @@ import { FFMPEG, run } from './ffmpeg.js';
 import type { Shot } from '../core/types.js';
 
 export interface DetectOptions {
+  /** 只检测这个时间之后（秒）。用于对单个镜头做局部重切。 */
+  from?: number;
+  /** 只检测到这个时间为止（秒）。 */
+  to?: number;
   /**
    * 场景变化阈值 0–1。低了会把镜头内的快速运动误判成切点，
    * 高了会漏掉相似画面之间的切换。0.3 对短视频（快剪、强色彩）实测比较稳。
@@ -37,8 +41,15 @@ export async function detectCuts(videoPath: string, opts: DetectOptions = {}): P
     throw new Error(`场景阈值必须在 0 和 1 之间，收到 ${threshold}`);
   }
 
+  // -ss / -to 放在 -i 之前做输入端裁剪，只解码需要的那一段。
+  // 对全片来说省不了多少，但局部重切时能把几分钟的解码缩到几秒。
+  const rangeArgs: string[] = [];
+  if (typeof opts.from === 'number' && opts.from > 0) rangeArgs.push('-ss', opts.from.toFixed(3));
+  if (typeof opts.to === 'number' && opts.to > 0) rangeArgs.push('-to', opts.to.toFixed(3));
+
   const res = await run(FFMPEG, [
     '-hide_banner', '-nostats',
+    ...rangeArgs,
     '-i', videoPath,
     '-filter_complex', `select='gt(scene,${threshold})',metadata=print:file=-`,
     '-an', '-f', 'null', '-',
@@ -66,7 +77,12 @@ export async function detectCuts(videoPath: string, opts: DetectOptions = {}): P
     }
   }
 
-  return cuts.sort((a, b) => a.time - b.time);
+  // 输入端裁剪后 ffmpeg 的 pts_time 从 0 重新计时，
+  // 必须把起点偏移加回去，否则局部重切出来的切点会全部错位到片头。
+  const offset = typeof opts.from === 'number' && opts.from > 0 ? opts.from : 0;
+  return cuts
+    .map((c) => ({ ...c, time: c.time + offset }))
+    .sort((a, b) => a.time - b.time);
 }
 
 /**
@@ -240,4 +256,46 @@ export function mergeWithPrevious(shots: Shot[], shotId: string): Shot[] {
   const next = shots.filter((_, i) => i !== index - 1 && i !== index);
   next.splice(index - 1, 0, merged);
   return renumber(next);
+}
+
+/**
+ * 在一个镜头内部按更低的阈值重新检测，把它切成若干段。
+ *
+ * 存在的理由：同一条片子里不同内容需要差一个数量级的阈值。
+ * 口播段落人一动整帧都在变，场景分数很高；录屏演示只有鼠标和局部 UI 在变，
+ * 占整帧不到 5%，分数被稀释到 0.0x 量级。全局用一个阈值必然顾此失彼——
+ * 调低了口播段碎成渣，调高了录屏段一刀不切。所以只对选中的镜头单独降阈值。
+ *
+ * 前半段保留原标注，后续各段只继承 A/B-roll 归类，规则与手动补刀一致。
+ */
+export function splitShotByCuts(shots: Shot[], shotId: string, cuts: Cut[]): Shot[] {
+  const target = shots.find((s) => s.id === shotId);
+  if (!target) throw new Error(`镜头不存在：${shotId}`);
+
+  const inside = cuts
+    .map((c) => c.time)
+    .filter((t) => t - target.start >= MIN_MANUAL_SHOT && target.end - t >= MIN_MANUAL_SHOT)
+    .sort((a, b) => a - b);
+
+  // 相邻切点太近的丢弃，避免切出一堆碎片
+  const kept: number[] = [];
+  for (const t of inside) {
+    const last = kept[kept.length - 1] ?? target.start;
+    if (t - last >= MIN_MANUAL_SHOT) kept.push(t);
+  }
+  if (kept.length === 0) return shots;
+
+  const boundaries = [target.start, ...kept, target.end];
+  const pieces: Shot[] = [];
+  for (let i = 0; i < boundaries.length - 1; i++) {
+    const start = boundaries[i] as number;
+    const end = boundaries[i + 1] as number;
+    pieces.push(
+      i === 0
+        ? { ...target, end }
+        : { ...emptyShot(0, start, end), roll: target.roll },
+    );
+  }
+
+  return renumber(shots.flatMap((s) => (s.id === shotId ? pieces : [s])));
 }

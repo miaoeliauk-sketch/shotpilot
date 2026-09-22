@@ -4,8 +4,8 @@ import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyzeVideo, resplit } from '../analyze/pipeline.js';
-import { mergeWithPrevious, splitShot } from '../analyze/shots.js';
-import { generateThumbnailFor } from '../analyze/thumbnails.js';
+import { detectCuts, mergeWithPrevious, splitShot, splitShotByCuts } from '../analyze/shots.js';
+import { generateThumbnailFor, generateThumbnails } from '../analyze/thumbnails.js';
 import { autoAnnotate, visionConfigFromEnv } from '../analyze/vision.js';
 import { checkToolchain } from '../analyze/ffmpeg.js';
 import { listProjects, loadProject, saveProject, thumbsDir } from '../core/project.js';
@@ -270,6 +270,33 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       sendJson(res, 200, { shots: project.shots });
     } catch (err) {
       sendError(res, 400, err instanceof Error ? err.message : '拆分失败');
+    }
+    return true;
+  }
+
+  // POST /api/projects/:id/shots/:shotId/autosplit —— 只对这个镜头用更低阈值重新检测
+  if (parts[3] === 'shots' && parts[4] && parts[5] === 'autosplit' && req.method === 'POST') {
+    const body = (await readBody(req)) as Record<string, unknown>;
+    const threshold = typeof body.threshold === 'number' ? body.threshold : 0.08;
+    const target = project.shots.find((s) => s.id === parts[4]);
+    if (!target) { sendError(res, 404, `镜头不存在：${parts[4]}`); return true; }
+    try {
+      const cuts = await detectCuts(project.source.path, {
+        threshold,
+        from: target.start,
+        to: target.end,
+      });
+      const before = project.shots.length;
+      project.shots = splitShotByCuts(project.shots, target.id, cuts);
+      const added = project.shots.length - before;
+      if (added > 0) {
+        // 只给新增的段落抽帧：原镜头的首段沿用旧缩略图，边界没变
+        project.shots = await generateThumbnails(project.source.path, project.shots, thumbsDir(id));
+        await saveProject(project);
+      }
+      sendJson(res, 200, { shots: project.shots, added, detected: cuts.length, threshold });
+    } catch (err) {
+      sendError(res, 500, err instanceof Error ? err.message : '局部重切失败');
     }
     return true;
   }
