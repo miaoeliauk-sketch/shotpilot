@@ -27,8 +27,6 @@ export function createProject(source: SourceMedia, title?: string): ReelProject 
     title: title?.trim() || basename(source.filename).replace(/\.[^.]+$/, ''),
     source,
     shots: [],
-    words: [],
-    audio: null,
     note: '',
     createdAt: now,
     updatedAt: now,
@@ -69,12 +67,13 @@ function migrate(project: ReelProject): ReelProject {
   if (project.version > PROJECT_VERSION) {
     throw new Error(`项目版本 ${project.version} 高于当前程序支持的 ${PROJECT_VERSION}，请升级 ShotPilot`);
   }
+  // 老项目里可能还带着转写和音频分析的字段——工具只管画面之后不再使用，读的时候剥掉，
+  // 下次保存就从文件里消失了。镜头和标注完全不受影响。
+  const { words: _words, audio: _audio, ...rest } = project as ReelProject & { words?: unknown; audio?: unknown };
   return {
-    ...project,
-    shots: project.shots ?? [],
-    words: project.words ?? [],
-    audio: project.audio ?? null,
-    note: project.note ?? '',
+    ...rest,
+    shots: rest.shots ?? [],
+    note: rest.note ?? '',
   };
 }
 

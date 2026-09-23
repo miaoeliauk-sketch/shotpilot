@@ -10,39 +10,23 @@ import { AbsoluteFill, Img, staticFile, useCurrentFrame } from 'remotion';
  *                 两圆不同心，差约 1px
  *   投影          绕头像顺时针旋转：偏移 45px，1.422°/帧，65 帧从正上转到正右
  *   头像可以破框：头发越出内圆约 14px，压在白环上
- *   字幕          白字身 + 灰细描边 + 右下投影，字形被水平压窄（字高 47 / 字宽约 34）
+ *
+ * 只复刻画面。原片底部那行口播字幕是后期加的，不在模板里；比对时用 --mask 遮掉。
  *
  * ── 槽位（换掉就是下一条视频）──────────────────────────────────────
  *   avatar    头像：带透明通道的图片，或逐帧 PNG 序列（数字人会说话就用序列）
  *   avatarBg  头像底色，头像素材本身透明时露出来
- *   captions  字幕时间轴：[{ from: 帧号, text }]
  */
 
 export type AvatarSource =
   | { kind: 'image'; src: string }
   | { kind: 'sequence'; dir: string; count: number; pad: number };
 
-export interface CaptionStyle {
-  /** 原片字体不是思源黑体。拿到原字体文件后放进 public/，在这里引用即可 */
-  fontFamily: string;
-  glyphTop: number;
-  glyphHeight: number;
-  fontSize: number;
-  fontWeight: number;
-  scaleX: number;
-  color: string;
-  stroke: string;
-  shadow: string;
-  offsetX: number;
-}
-
 // 用 type 而非 interface：Remotion 要求 props 可赋值给 Record<string, unknown>，
 // interface 没有隐式索引签名，过不了类型检查
 export type AvatarCardProps = {
   avatar: AvatarSource;
-  captionStyle?: Partial<CaptionStyle>;
   avatarBg: string;
-  captions: { from: number; text: string }[];
   background: string;
   ringColor: string;
   showPillarbox: boolean;
@@ -52,10 +36,6 @@ export const avatarCardDefaults: AvatarCardProps = {
   // 默认填原片头像，用于验证结构；实际使用时换成你自己的头像
   avatar: { kind: 'sequence', dir: 'avatar', count: 65, pad: 3 },
   avatarBg: '#C2E3FD',
-  captions: [
-    { from: 0, text: '教会你怎么用agent办公效率直接拉满' },
-    { from: 37, text: '像我们活动策划' },
-  ],
   background: '#FBFBFB',
   ringColor: '#FFFFFF',
   showPillarbox: true,
@@ -95,27 +75,6 @@ function ringShadow(frame: number): string {
   return `${dx.toFixed(2)}px ${dy.toFixed(2)}px ${SHADOW_ORBIT.blur}px rgba(0,0,0,${SHADOW_ORBIT.alpha}), 0px 4px 4px rgba(0,0,0,0.02)`;
 }
 
-// 字幕。几何（字号 / 压窄 / 位置）由三轮扫参对齐墨迹框，误差 ±2px；
-// 样式没有按像素误差选——见下方说明。
-//
-// 为什么不用像素误差最优的那组：原片字体不是思源黑体，笔画位置天然对不上。
-// 这种情况下多画一笔灰会被扣两次分（原片有墨复刻没有 + 复刻有墨原片没有），
-// 所以像素指标系统性地偏爱「画得更淡」——误差最低的候选（2px 模糊投影，9.72）
-// 肉眼看又细又空；挤出式硬投影（10.4）分数略差，却还原了原片那道灰色立体侧边。
-// 字形对不上时，按肉眼选。
-export const CAPTION_DEFAULT: CaptionStyle = {
-  fontFamily: '"Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC", "PingFang SC", sans-serif',
-  glyphTop: 624,
-  glyphHeight: 47,
-  fontSize: 47,
-  fontWeight: 400,
-  scaleX: 0.74,
-  color: '#FFFFFF',
-  stroke: '0.8px #AAAAAA',
-  shadow: '1px 1px 0 #A0A0A0, 2px 2px 0 #A8A8A8, 3px 3px 0 #B0B0B0, 4px 4px 1px #C4C4C4',
-  offsetX: 1.5,
-};
-
 const PILLAR_COLUMNS: { x: number; color: string }[] = [
   ...[0, 1, 2, 3].map((x) => ({ x, color: '#000000' })),
   { x: 4, color: 'rgb(78,78,78)' },
@@ -134,8 +93,6 @@ function avatarSrc(a: AvatarSource, frame: number): string {
 
 export const AvatarCard: React.FC<AvatarCardProps> = (props) => {
   const frame = useCurrentFrame();
-  const caption = [...props.captions].reverse().find((c) => frame >= c.from)?.text ?? '';
-  const CAPTION = { ...CAPTION_DEFAULT, ...props.captionStyle };
 
   return (
     <AbsoluteFill style={{ backgroundColor: props.background }}>
@@ -177,38 +134,6 @@ export const AvatarCard: React.FC<AvatarCardProps> = (props) => {
           height: AVATAR_BOX.size,
         }}
       />
-
-      {/* 字幕 */}
-      <div
-        style={{
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: CAPTION.glyphTop,
-          height: CAPTION.glyphHeight,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          transform: `translateX(${CAPTION.offsetX}px)`,
-        }}
-      >
-        <span
-          style={{
-            display: 'inline-block',
-            fontFamily: CAPTION.fontFamily,
-            fontWeight: CAPTION.fontWeight,
-            fontSize: CAPTION.fontSize,
-            lineHeight: 1,
-            color: CAPTION.color,
-            WebkitTextStroke: CAPTION.stroke,
-            textShadow: CAPTION.shadow,
-            transform: `scaleX(${CAPTION.scaleX})`,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {caption}
-        </span>
-      </div>
 
       {/* 原片左右黑边：逐列实测。4 列纯黑 + 1 列半灰(78) + 1 列白色亮边(放大时锐化留下的振铃) */}
       {props.showPillarbox &&

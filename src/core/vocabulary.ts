@@ -101,8 +101,6 @@ export const CAMERA_ANGLES = [
 export const TRANSITIONS = [
   { value: 'cut', label: '硬切' },
   { value: 'match-cut', label: '匹配剪辑' },
-  { value: 'j-cut', label: 'J-cut', hint: '声音先进' },
-  { value: 'l-cut', label: 'L-cut', hint: '声音后出' },
   { value: 'dissolve', label: '叠化' },
   { value: 'fade', label: '淡入淡出' },
   { value: 'whip-pan', label: '甩转场' },
@@ -130,15 +128,6 @@ export const BROLL_NEEDS = [
   { value: 'required', label: '必须拆', hint: '这段的信息量依赖画面，光靠口播撑不住' },
 ] as const satisfies readonly Term[];
 
-/** 音频段落类型 */
-export const AUDIO_KINDS = [
-  { value: 'speech', label: '人声' },
-  { value: 'music', label: '音乐' },
-  { value: 'speech-music', label: '人声+音乐' },
-  { value: 'sfx', label: '音效' },
-  { value: 'silence', label: '静音' },
-] as const satisfies readonly Term[];
-
 export type ShotSize = (typeof SHOT_SIZES)[number]['value'];
 export type CameraMove = (typeof CAMERA_MOVES)[number]['value'];
 export type Composition = (typeof COMPOSITIONS)[number]['value'];
@@ -148,7 +137,6 @@ export type CameraAngle = (typeof CAMERA_ANGLES)[number]['value'];
 export type Transition = (typeof TRANSITIONS)[number]['value'];
 export type RollKind = (typeof ROLL_KINDS)[number]['value'];
 export type BrollNeed = (typeof BROLL_NEEDS)[number]['value'];
-export type AudioKind = (typeof AUDIO_KINDS)[number]['value'];
 
 /** 界面按维度渲染面板，顺序即面板从上到下的顺序 */
 export const DIMENSIONS = [

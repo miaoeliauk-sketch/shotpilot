@@ -1,10 +1,7 @@
-import { mkdir, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { mkdir } from 'node:fs/promises';
 import { probeMedia } from './probe.js';
 import { buildShots, carryOverAnnotations, detectCuts } from './shots.js';
 import { generateThumbnails } from './thumbnails.js';
-import { analyzeAudio } from './audio.js';
-import { extractAudioTrack, importSubtitles, transcribeWithWhisperX } from './transcribe.js';
 import { createProject, projectDir, saveProject, thumbsDir } from '../core/project.js';
 import type { ReelProject } from '../core/types.js';
 
@@ -12,20 +9,15 @@ export interface AnalyzeOptions {
   title?: string;
   threshold?: number;
   minShotDuration?: number;
-  /** 转写方式：whisperx 跑本地模型，subtitles 导入现成文件，none 跳过 */
-  transcribe?: 'whisperx' | 'subtitles' | 'none';
-  subtitlePath?: string;
-  language?: string;
-  skipAudio?: boolean;
 }
 
 export type ProgressFn = (stage: string, detail?: string) => void;
 
 /**
- * 完整分析流水线：探测 → 切分 → 缩略图 → 转写 → 音频。
+ * 分析流水线：探测 → 切分镜 → 缩略图。
  *
- * 顺序有讲究：转写必须排在音频分析之前，因为音频段落的人声/音乐判定
- * 要拿词级时间戳当判据（见 audio.ts 里的说明）。
+ * 只处理画面。声音（背景音乐、人声）和口播字幕不归这个工具管——
+ * 那些在后期里加，拉片和复刻都只关心画面长什么样、怎么动。
  */
 export async function analyzeVideo(
   videoPath: string,
@@ -49,42 +41,6 @@ export async function analyzeVideo(
 
   onProgress('thumbnails', '抽取镜头缩略图');
   project.shots = await generateThumbnails(videoPath, project.shots, thumbsDir(project.id));
-
-  const mode = opts.transcribe ?? 'none';
-  if (mode !== 'none' && source.hasAudio) {
-    try {
-      if (mode === 'subtitles') {
-        if (!opts.subtitlePath) throw new Error('选择了导入字幕但没给文件路径');
-        onProgress('transcribe', '导入字幕');
-        const r = await importSubtitles(opts.subtitlePath);
-        project.words = r.words;
-        onProgress('transcribe', `${r.method}，${r.words.length} 个词`);
-      } else {
-        onProgress('transcribe', '抽取音轨');
-        const wav = join(projectDir(project.id), 'audio.wav');
-        await extractAudioTrack(videoPath, wav);
-        onProgress('transcribe', '本地 WhisperX 转写中（首次会下载模型，耗时较久）');
-        const r = await transcribeWithWhisperX(wav, projectDir(project.id), { language: opts.language });
-        project.words = r.words;
-        await rm(wav, { force: true });
-        onProgress('transcribe', `${r.method}，${r.words.length} 个词`);
-      }
-    } catch (err) {
-      // 转写失败不该让已经切好的分镜作废
-      onProgress('transcribe', `转写失败，已跳过：${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
-
-  if (!opts.skipAudio && source.hasAudio) {
-    try {
-      onProgress('audio', '分析 BGM 与音频段落');
-      project.audio = await analyzeAudio(videoPath, project.words, source.duration);
-      const bpm = project.audio.bpm;
-      onProgress('audio', `${project.audio.segments.length} 个音频段落${bpm ? `，BPM ≈ ${bpm}` : '，未测出稳定节奏'}`);
-    } catch (err) {
-      onProgress('audio', `音频分析失败，已跳过：${err instanceof Error ? err.message : String(err)}`);
-    }
-  }
 
   await saveProject(project);
   onProgress('done', `项目已保存：${project.id}`);

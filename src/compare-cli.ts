@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { buildDiffVideo, compareVideos, formatReport } from './export/compare.js';
+import { buildDiffVideo, compareVideos, formatReport, parseMask } from './export/compare.js';
 
 /** 渲染结果与原片的逐帧比对。复刻迭代闭环的验收环节。 */
 
@@ -12,9 +12,12 @@ const USAGE = `
 渲染结果与原片比对
 
   pnpm compare --rendered <渲染出的.mp4> --original <原片片段.mp4> [--fps 10]
-                [--mean 0.9] [--min 0.8] [--diff <差异视频.mp4>]
+                [--mean 0.9] [--min 0.8] [--diff <差异视频.mp4>] [--mask x,y,宽,高 ...]
 
 逐帧计算 SSIM，指出最不像的几帧和对应的帧文件；并分格检测「越往后越不像」的局部漂移。
+
+--mask 把某块区域排除在比对之外（按原片像素坐标，可以写多个）。
+原片里烧进去的口播字幕不属于复刻范围，用它遮掉，例如 --mask 0,610,1280,90
 
 退出码：0 通过 · 2 SSIM 未达标 · 3 SSIM 达标但有局部漂移（有动效没还原）
 两边分辨率不同会自动缩放对齐，不影响判断。
@@ -33,12 +36,15 @@ async function main(): Promise<void> {
     min: arg('min') ? Number(arg('min')) : 0.8,
   };
 
-  const report = await compareVideos(resolve(rendered), resolve(original), { threshold });
+  // --mask 可以出现多次
+  const masks = process.argv.flatMap((v, i) => (v === '--mask' && process.argv[i + 1] ? [parseMask(process.argv[i + 1] as string)] : []));
+  const report = await compareVideos(resolve(rendered), resolve(original), { threshold, masks });
+  if (masks.length > 0) console.log(`（已遮掉 ${masks.length} 个区域，不参与比对）\n`);
   console.log(formatReport(report, arg('fps') ? Number(arg('fps')) : 10));
 
   const diffOut = arg('diff');
   if (diffOut) {
-    await buildDiffVideo(resolve(rendered), resolve(original), resolve(diffOut));
+    await buildDiffVideo(resolve(rendered), resolve(original), resolve(diffOut), masks);
     console.log(`\n三联对比视频：${resolve(diffOut)}（左 原片 · 中 复刻 · 右 差异）`);
   }
 

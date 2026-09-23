@@ -4,7 +4,7 @@ import { analyzeVideo } from './analyze/pipeline.js';
 import { autoAnnotate, visionConfigFromEnv } from './analyze/vision.js';
 import { loadProject, saveProject } from './core/project.js';
 import { toMarkdown } from './export/notes.js';
-import { toHandoffJson, toSvml } from './export/svml.js';
+import { toHandoffJson } from './export/handoff.js';
 
 /** 命令行入口。UI 干不了的批处理（跑一批参考片）走这里。 */
 
@@ -22,11 +22,10 @@ ShotPilot 拉片 CLI
 
   分析视频：
     pnpm analyze --input <视频路径> [--threshold 0.3] [--min-shot 0.4]
-                 [--transcribe whisperx|subtitles] [--subtitles <路径>] [--language zh]
                  [--ai]                        分析完立即跑 AI 初判
 
   导出已有项目：
-    pnpm analyze --project <项目id> --export md|svml|json --out <输出路径>
+    pnpm analyze --project <项目id> --export md|json --out <输出路径>
 
 环境变量：
   SHOTPILOT_PROJECTS          项目存放目录（默认 ./projects）
@@ -43,7 +42,6 @@ async function main(): Promise<void> {
     const project = await loadProject(projectId);
     const body =
       exportFormat === 'md' ? toMarkdown(project) :
-      exportFormat === 'svml' ? toSvml(project) :
       exportFormat === 'json' ? toHandoffJson(project) : null;
     if (body === null) throw new Error(`未知导出格式：${exportFormat}`);
     const out = arg('out');
@@ -63,13 +61,9 @@ async function main(): Promise<void> {
     return;
   }
 
-  const transcribeRaw = arg('transcribe');
   const project = await analyzeVideo(resolve(input), {
     threshold: arg('threshold') ? Number(arg('threshold')) : undefined,
     minShotDuration: arg('min-shot') ? Number(arg('min-shot')) : undefined,
-    transcribe: transcribeRaw === 'whisperx' || transcribeRaw === 'subtitles' ? transcribeRaw : 'none',
-    subtitlePath: arg('subtitles'),
-    language: arg('language'),
   }, (stage, detail) => console.log(`[${stage}] ${detail ?? ''}`));
 
   if (has('ai')) {

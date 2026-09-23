@@ -82,14 +82,6 @@ textarea { resize: vertical; min-height: 70px; }
 .transport { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 13px; }
 .transport .time { font-family: ui-monospace, monospace; color: var(--muted); }
 
-/* 音频段落条：一眼看出哪里是人声、哪里是纯 BGM */
-.audiobar { height: 16px; display: flex; margin: 0 14px 8px; border-radius: 3px; overflow: hidden; border: 1px solid var(--line); }
-.audiobar div { height: 100%; }
-.aud-speech, .aud-speech-music { background: var(--aroll); }
-.aud-music { background: var(--broll); }
-.aud-silence { background: #2a2f3a; }
-.aud-sfx { background: var(--overlay); }
-
 /* ---------- 胶片条 ---------- */
 .filmstrip { display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px; }
 .cell { flex: 0 0 auto; width: 132px; border: 2px solid transparent; border-radius: 6px; background: var(--panel-2); cursor: pointer; overflow: hidden; position: relative; }
@@ -117,7 +109,6 @@ textarea { resize: vertical; min-height: 70px; }
 .shot-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .shot-head .id { font-weight: 700; font-size: 16px; }
 .shot-head .t { color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; }
-.quote { background: var(--bg); border-left: 2px solid var(--accent); padding: 6px 10px; margin: 8px 0; font-size: 13px; color: #cfd4dd; border-radius: 0 4px 4px 0; max-height: 120px; overflow-y: auto; }
 .hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
 .empty { color: var(--muted); padding: 30px 10px; text-align: center; }
 .toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--panel-2); border: 1px solid var(--accent); padding: 8px 16px; border-radius: 6px; font-size: 13px; z-index: 50; }

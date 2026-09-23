@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectDrift, formatReport, parseSsimLog, summarize } from '../src/export/compare.js';
+import { detectDrift, formatReport, maskChain, parseMask, parseSsimLog, summarize } from '../src/export/compare.js';
 
 const SAMPLE = `n:1 Y:0.815279 U:0.770129 V:0.749061 All:0.796718 (6.919008)
 n:2 Y:0.915658 U:0.870368 V:0.849162 All:0.897027 (6.925618)
@@ -116,5 +116,24 @@ describe('formatReport 漂移提示', () => {
     expect(out).toContain('✅ 达标');
     expect(out).toContain('局部越往后越不像');
     expect(out).toContain('右侧');
+  });
+});
+
+describe('遮罩', () => {
+  it('解析 x,y,宽,高', () => {
+    expect(parseMask('0,610,1280,90')).toEqual({ x: 0, y: 610, w: 1280, h: 90 });
+    expect(parseMask(' 10, 20 ,30,40 ')).toEqual({ x: 10, y: 20, w: 30, h: 40 });
+  });
+
+  it('格式不对直接报错，不猜', () => {
+    expect(() => parseMask('0,610,1280')).toThrow(/x,y,宽,高/);
+    expect(() => parseMask('a,b,c,d')).toThrow(/x,y,宽,高/);
+    expect(() => parseMask('0,0,0,90')).toThrow(/x,y,宽,高/);
+  });
+
+  it('生成涂黑滤镜链；没有遮罩时原样通过', () => {
+    expect(maskChain([])).toBe('null');
+    expect(maskChain([{ x: 0, y: 610, w: 1280, h: 90 }])).toBe('drawbox=x=0:y=610:w=1280:h=90:color=black:t=fill');
+    expect(maskChain([{ x: 1, y: 2, w: 3, h: 4 }, { x: 5, y: 6, w: 7, h: 8 }]).split(',drawbox')).toHaveLength(2);
   });
 });

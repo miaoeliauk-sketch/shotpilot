@@ -71,16 +71,6 @@ function renderHome() {
           <input id="threshold" type="number" step="0.05" min="0.05" max="0.95" value="0.3" style="width:90px">
           <label>最短镜头(秒)</label>
           <input id="minDur" type="number" step="0.1" min="0.1" value="0.4" style="width:90px">
-          <label>转写</label>
-          <select id="transcribe" style="width:auto">
-            <option value="none">不转写</option>
-            <option value="whisperx">本地 WhisperX</option>
-            <option value="subtitles">导入字幕文件</option>
-          </select>
-        </div>
-        <div class="row" id="subRow" style="display:none">
-          <label>字幕路径</label>
-          <input id="subPath" placeholder="/path/to/subtitle.srt 或 whisper 输出的 .json">
         </div>
         <div class="row">
           <button class="primary" id="go">开始分析</button>
@@ -108,10 +98,6 @@ function renderHome() {
     list.appendChild(el);
   }
 
-  const transcribeSel = root.querySelector('#transcribe');
-  transcribeSel.onchange = () => {
-    root.querySelector('#subRow').style.display = transcribeSel.value === 'subtitles' ? 'flex' : 'none';
-  };
   root.querySelector('#go').onclick = startAnalyze;
 }
 
@@ -138,8 +124,6 @@ async function startAnalyze() {
       path,
       threshold: Number(root.querySelector('#threshold').value),
       minShotDuration: Number(root.querySelector('#minDur').value),
-      transcribe: root.querySelector('#transcribe').value,
-      subtitlePath: root.querySelector('#subPath')?.value.trim() || undefined,
     }, {
       progress: (d) => append(`[${d.stage}] ${d.detail ?? ''}`),
       done: (d) => { append('完成'); openProject(d.id); },
@@ -178,11 +162,10 @@ function renderWorkbench() {
           <button id="btnResplit">重新切分</button>
           <button id="btnAi" ${state.visionConfigured ? '' : 'disabled title="未配置 SHOTPILOT_VISION_API_KEY"'}>AI 初判</button>
           <button id="btnMd">导出笔记</button>
-          <button id="btnSvml">导出 SVML</button>
+          <button id="btnJson">导出数据</button>
           <button id="btnHome">返回</button>
         </div>
         <div class="player"><video id="video" src="/api/projects/${p.id}/video" controls preload="metadata"></video></div>
-        <div id="audiobar"></div>
         <div class="transport">
           <span class="time" id="clock">00:00.0</span>
           <span class="grow"></span>
@@ -200,37 +183,12 @@ function renderWorkbench() {
 
   root.querySelector('#btnHome').onclick = () => { history.replaceState(null, '', '/'); boot(); };
   root.querySelector('#btnMd').onclick = () => window.open(`/api/projects/${p.id}/export/md`);
-  root.querySelector('#btnSvml').onclick = () => window.open(`/api/projects/${p.id}/export/svml`);
+  root.querySelector('#btnJson').onclick = () => window.open(`/api/projects/${p.id}/export/json`);
   root.querySelector('#btnResplit').onclick = doResplit;
   root.querySelector('#btnAi').onclick = doAutoAnnotate;
 
-  renderAudioBar();
   renderStrip();
   renderSide();
-}
-
-function renderAudioBar() {
-  const host = root.querySelector('#audiobar');
-  const audio = state.project.audio;
-  if (!audio || audio.segments.length === 0) { host.innerHTML = ''; return; }
-
-  const total = state.project.source.duration;
-  const bar = document.createElement('div');
-  bar.className = 'audiobar';
-  bar.title = audio.bpm ? `BGM 节奏 BPM ≈ ${audio.bpm} · ${audio.method}` : audio.method;
-  for (const seg of audio.segments) {
-    const d = document.createElement('div');
-    d.className = `aud-${seg.kind}`;
-    d.style.width = `${((seg.end - seg.start) / total) * 100}%`;
-    d.title = `${fmt(seg.start)}–${fmt(seg.end)} ${seg.kind}`;
-    bar.appendChild(d);
-  }
-  bar.onclick = (e) => {
-    const rect = bar.getBoundingClientRect();
-    seekTo(((e.clientX - rect.left) / rect.width) * total);
-  };
-  host.innerHTML = '';
-  host.appendChild(bar);
 }
 
 function renderStrip() {
@@ -250,20 +208,11 @@ function renderStrip() {
   active?.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
 }
 
-function shotWords(shot) {
-  return state.project.words
-    .filter((w) => w.start < shot.end && w.end > shot.start)
-    .map((w) => w.text)
-    .join('')
-    .trim();
-}
-
 function renderSide() {
   const side = root.querySelector('#side');
   const shot = activeShot();
   if (!shot) { side.innerHTML = '<div class="empty">没有镜头</div>'; return; }
 
-  const text = shotWords(shot);
   let html = `
     <div class="shot-head">
       <span class="id">${shot.id}</span>
@@ -271,7 +220,6 @@ function renderSide() {
       <span class="t">${(shot.end - shot.start).toFixed(2)}s</span>
     </div>
     <div class="hint">${shot.index + 1} / ${state.project.shots.length}</div>
-    ${text ? `<div class="quote">${esc(text)}</div>` : '<div class="hint">这个镜头没有口播（或未做转写）</div>'}
     <div class="group"><h3>备注</h3><textarea id="note" placeholder="为什么这么拍？学到什么？">${esc(shot.note)}</textarea></div>`;
 
   for (const dim of state.dimensions) {

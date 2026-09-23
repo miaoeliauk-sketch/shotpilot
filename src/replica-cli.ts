@@ -20,7 +20,7 @@ const USAGE = `
   --out         输出目录，默认 ./replica-out
   --fps         帧序列采样率，默认 10
 
-包里有：原片片段、逐帧序列、结构化标注、口播文案、给 agent 的三步法指令。
+包里有：原片片段（无音轨）、逐帧序列、画面标注、给 agent 的三步法指令。只管画面。
 `;
 
 async function main(): Promise<void> {

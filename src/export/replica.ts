@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { FFMPEG, runOrThrow } from '../analyze/ffmpeg.js';
-import { formatTime, shotText, wordsInShot, type ReelProject, type Shot } from '../core/types.js';
+import { type ReelProject, type Shot } from '../core/types.js';
 import { labelOf } from '../core/vocabulary.js';
 
 /**
@@ -64,7 +64,8 @@ async function extractClip(videoPath: string, shot: Shot, outPath: string, sourc
     '-i', videoPath,
     // 重新编码而不是 -c copy：copy 会从最近的关键帧开始，头几帧可能不是我们要的那一段
     '-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
-    '-c:a', 'aac',
+    // 只管画面，不带音轨
+    '-an',
     '-y', outPath,
   ], { timeoutMs: 10 * 60_000 });
 }
@@ -113,27 +114,24 @@ export function shotManifest(project: ReelProject, shot: Shot, frameCount: numbe
     brollContent: shot.brollContent ?? null,
     /** 可替换槽位。空数组表示还没标，agent 应在第一步里提议槽位划分。 */
     slots: shot.slots ?? [],
-    narration: {
-      text: shotText(project, shot),
-      words: wordsInShot(project, shot).map((w) => ({
-        text: w.text,
-        // 转成镜头内的相对时间，agent 不用自己减偏移
-        start: Number((w.start - shot.start).toFixed(3)),
-        end: Number((w.end - shot.start).toFixed(3)),
-      })),
-    },
   };
 }
 
 /** agent 的入口指令。按「摆位 → 动效 → 比对迭代」三步组织。 */
 export function replicaInstructions(project: ReelProject, shot: Shot, frameCount: number, opts: Required<ReplicaOptions>): string {
   const dur = (shot.end - shot.start).toFixed(2);
-  const text = shotText(project, shot);
   return `# 复刻任务：${shot.id}
 
-把 \`clip.mp4\` 这一段用 [Remotion](https://www.remotion.dev) 还原成代码。
+把 \`clip.mp4\` 这一段的**画面**用 [Remotion](https://www.remotion.dev) 还原成代码。
 
 **第一指标是像。** 不是好看，不是创意，是跟原片对得上。
+
+## 范围：只复刻画面
+
+- **不管声音。** 背景音乐、人声都不做，\`clip.mp4\` 也不带音轨。
+- **不复刻口播字幕。** 跟着说话滚动的那行字幕是后期加的，不属于这个镜头的设计。
+  原片里如果有，比对时用 \`--mask\` 把字幕区域遮掉（见第三步）。
+- **画面设计里的文字要复刻。** 标题、字卡、文字框、标签这些是画面的一部分，照常还原。
 
 ## 素材
 
@@ -141,11 +139,10 @@ export function replicaInstructions(project: ReelProject, shot: Shot, frameCount
 | --- | --- |
 | \`clip.mp4\` | 原片这一段（${dur} 秒），**验收基准** |
 | \`frames/f0001.png\` … \`f${String(frameCount).padStart(4, '0')}.png\` | 逐帧序列，${opts.fps}fps。帧 n 对应镜头内 (n-1)/${opts.fps} 秒 |
-| \`shot.json\` | 画布尺寸、时长、标注、槽位定义、口播逐词时间戳 |
-| \`narration.txt\` | 这一段的口播文案 |
+| \`shot.json\` | 画布尺寸、时长、画面标注、槽位定义 |
 
 画布：**${project.source.width}×${project.source.height}**，原片 ${project.source.fps.toFixed(2)}fps，时长 **${dur} 秒**。
-${text ? `\n口播：「${text}」\n` : '\n这一段没有口播。\n'}
+
 ## 第一步：把画面摆对
 
 翻 \`frames/\` 找到画面最完整、元素最齐的那一帧作为基准帧，然后：
@@ -185,17 +182,24 @@ npx remotion render <composition> out.mp4
 pnpm compare --rendered out.mp4 --original clip.mp4
 \`\`\`
 
+原片里有口播字幕的话，加 \`--mask x,y,宽,高\` 把字幕区域遮掉（坐标按原片像素，可以写多个），
+不然那一块永远对不上，会干扰判断。例如字幕在画面底部：
+
+\`\`\`bash
+pnpm compare --rendered out.mp4 --original clip.mp4 --mask 0,610,${project.source.width},90
+\`\`\`
+
 它会逐帧算 SSIM 并告诉你**哪几帧差最多**。拿着那几帧的帧号回到 \`frames/\` 里对照，
 针对性地改位置或曲线，再渲染再比。**不要凭感觉改**——每轮都要看分数有没有涨。
 
 目标：平均 SSIM ≥ 0.90，且没有单帧低于 0.80。达不到就继续迭代。
 
 **但 SSIM 达标不等于像。** 大面积平坦背景会把全幅分数撑高——实测案例在投影方向错误、
-字幕明显不对的时候全幅 SSIM 就已经 0.976 了。一定要：
+黑边也不对的时候，全幅 SSIM 就已经 0.976 了。一定要：
 
 - 用 \`--diff\` 生成三联对比视频，**看**差异图里哪里亮
 - 按区域（背景 / 主体 / 装饰 / 文字）分别算误差，别只看一个总分
-- 看报告里的「时间趋势」，越往后越差说明有动效没还原
+- 看报告里有没有「局部越往后越不像」，有就说明有动效没还原（这时退出码是 3）
 
 ## 常见陷阱
 
@@ -243,13 +247,6 @@ export async function buildReplicaPackage(
   const manifest = shotManifest(project, shot, frameCount, opts);
   await writeFile(join(dir, 'shot.json'), JSON.stringify(manifest, null, 2), 'utf8');
   await writeFile(join(dir, 'README.md'), replicaInstructions(project, shot, frameCount, opts), 'utf8');
-
-  const narration = shotText(project, shot);
-  await writeFile(
-    join(dir, 'narration.txt'),
-    narration || `（${formatTime(shot.start)}–${formatTime(shot.end)} 这一段没有口播，或未做转写）`,
-    'utf8',
-  );
 
   return { dir, frameCount };
 }

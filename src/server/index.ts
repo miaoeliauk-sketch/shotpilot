@@ -11,7 +11,7 @@ import { checkToolchain } from '../analyze/ffmpeg.js';
 import { listProjects, loadProject, saveProject, thumbsDir } from '../core/project.js';
 import { DIMENSIONS } from '../core/vocabulary.js';
 import { toMarkdown } from '../export/notes.js';
-import { toHandoffJson, toSvml } from '../export/svml.js';
+import { toHandoffJson } from '../export/handoff.js';
 import type { ReelProject, Shot } from '../core/types.js';
 
 const WEB_ROOT = resolve(fileURLToPath(new URL('../../web', import.meta.url)));
@@ -185,9 +185,6 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
         title: typeof body.title === 'string' ? body.title : undefined,
         threshold: typeof body.threshold === 'number' ? body.threshold : undefined,
         minShotDuration: typeof body.minShotDuration === 'number' ? body.minShotDuration : undefined,
-        transcribe: body.transcribe === 'whisperx' || body.transcribe === 'subtitles' ? body.transcribe : 'none',
-        subtitlePath: typeof body.subtitlePath === 'string' ? body.subtitlePath : undefined,
-        language: typeof body.language === 'string' ? body.language : undefined,
       }, (stage, detail) => emit('progress', { stage, detail }));
       emit('done', { id: project.id });
     } catch (err) {
@@ -368,8 +365,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       res.end(body);
     };
     if (format === 'md') return send(toMarkdown(project), 'text/markdown; charset=utf-8', `${safeTitle}-拉片笔记.md`), true;
-    if (format === 'svml') return send(toSvml(project), 'application/xml; charset=utf-8', `${safeTitle}.svml`), true;
-    if (format === 'json') return send(toHandoffJson(project), 'application/json; charset=utf-8', `${safeTitle}-handoff.json`), true;
+    if (format === 'json') return send(toHandoffJson(project), 'application/json; charset=utf-8', `${safeTitle}-拉片数据.json`), true;
     sendError(res, 400, `未知导出格式：${format}`);
     return true;
   }

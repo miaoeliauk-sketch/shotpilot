@@ -1,5 +1,33 @@
 import { spawn } from 'node:child_process';
 import { FFMPEG, run } from '../analyze/ffmpeg.js';
+import { probeMedia } from '../analyze/probe.js';
+
+/**
+ * 比对时遮掉的区域（按原片像素坐标）。
+ *
+ * 用来排除不属于复刻范围的东西，最常见的是口播字幕：它是后期加的，复刻不做，
+ * 但原片里烧进去了——不遮掉的话那一块永远对不上，把真正的问题淹没。
+ * 两边同一位置都涂黑，于是那一块误差恒为 0。
+ */
+export interface MaskRect { x: number; y: number; w: number; h: number }
+
+/** 解析 "x,y,宽,高"。写错就直接报错，不猜。 */
+export function parseMask(text: string): MaskRect {
+  const parts = text.split(',').map((v) => Number(v.trim()));
+  const [x, y, w, h] = parts;
+  if (parts.length !== 4 || parts.some((v) => !Number.isFinite(v)) || (w ?? 0) <= 0 || (h ?? 0) <= 0) {
+    throw new Error(`遮罩格式应为 x,y,宽,高（例如 0,610,1280,90），收到「${text}」`);
+  }
+  return { x: x as number, y: y as number, w: w as number, h: h as number };
+}
+
+/** 生成 ffmpeg 的涂黑滤镜链。没有遮罩时返回 null 滤镜（原样通过）。 */
+export function maskChain(masks: MaskRect[]): string {
+  if (masks.length === 0) return 'null';
+  return masks
+    .map((m) => `drawbox=x=${Math.round(m.x)}:y=${Math.round(m.y)}:w=${Math.round(m.w)}:h=${Math.round(m.h)}:color=black:t=fill`)
+    .join(',');
+}
 
 /**
  * 渲染结果与原片的逐帧比对。
@@ -116,11 +144,17 @@ export function detectDrift(
 }
 
 /** 把视频解码成缩小的逐帧灰度。二进制输出，不能走 run()（它按字符串收集 stdout）。 */
-export function decodeGray(path: string, w = 320, h = 180): Promise<Float32Array[]> {
+export function decodeGray(
+  path: string, w = 320, h = 180,
+  base?: { width: number; height: number; masks: MaskRect[] },
+): Promise<Float32Array[]> {
+  // 有 base 时先统一缩放到原片尺寸，再按原片坐标涂黑遮罩区，最后缩小——
+  // 两个视频分辨率不同也能用同一套遮罩坐标
+  const pre = base ? `scale=${base.width}:${base.height},${maskChain(base.masks)},` : '';
   return new Promise((resolve, reject) => {
     const child = spawn(FFMPEG, [
       '-hide_banner', '-loglevel', 'error', '-i', path,
-      '-vf', `scale=${w}:${h}:flags=area,format=gray`, '-f', 'rawvideo', '-',
+      '-vf', `${pre}scale=${w}:${h}:flags=area,format=gray`, '-f', 'rawvideo', '-',
     ], { stdio: ['ignore', 'pipe', 'pipe'] });
     const chunks: Buffer[] = [];
     let stderr = '';
@@ -189,13 +223,16 @@ export function summarize(
 export async function compareVideos(
   renderedPath: string,
   originalPath: string,
-  opts: { threshold?: { mean: number; min: number } } = {},
+  opts: { threshold?: { mean: number; min: number }; masks?: MaskRect[] } = {},
 ): Promise<CompareReport> {
+  const masks = opts.masks ?? [];
+  const chain = maskChain(masks);
   const res = await run(FFMPEG, [
     '-hide_banner', '-nostats',
     '-i', renderedPath,
     '-i', originalPath,
-    '-lavfi', '[0:v]setpts=PTS-STARTPTS[a];[1:v]setpts=PTS-STARTPTS[b];[a][b]scale2ref=flags=bicubic[a2][b2];[a2][b2]ssim=stats_file=-',
+    // 先把复刻版缩放到原片尺寸，再按原片坐标涂黑遮罩区，最后比
+    '-lavfi', `[0:v]setpts=PTS-STARTPTS[a];[1:v]setpts=PTS-STARTPTS[b];[a][b]scale2ref=flags=bicubic[a2][b2];[a2]${chain}[a3];[b2]${chain}[b3];[a3][b3]ssim=stats_file=-`,
     '-f', 'null', '-',
   ], { timeoutMs: 15 * 60_000 });
 
@@ -208,7 +245,10 @@ export async function compareVideos(
   const scores = parseSsimLog(res.stdout || res.stderr);
   const report = summarize(scores, opts.threshold);
 
-  const [ref, rend] = await Promise.all([decodeGray(originalPath), decodeGray(renderedPath)]);
+  // 漂移检测也要遮掉同样的区域，否则字幕换句会被当成「越往后越不像」
+  const { width, height } = await probeMedia(originalPath);
+  const base = { width, height, masks };
+  const [ref, rend] = await Promise.all([decodeGray(originalPath, 320, 180, base), decodeGray(renderedPath, 320, 180, base)]);
   report.drift = detectDrift(ref, rend, 320, 180);
   return report;
 }
@@ -262,7 +302,9 @@ export async function buildDiffVideo(
   renderedPath: string,
   originalPath: string,
   outPath: string,
+  masks: MaskRect[] = [],
 ): Promise<void> {
+  const chain = maskChain(masks);
   const res = await run(FFMPEG, [
     '-hide_banner', '-nostats', '-loglevel', 'error',
     '-i', originalPath,
@@ -270,7 +312,10 @@ export async function buildDiffVideo(
     '-filter_complex',
     [
       // 把复刻版缩放到原片尺寸，否则无法逐像素相减
-      '[1:v]scale2ref=flags=bicubic[rep][orig]',
+      '[1:v]scale2ref=flags=bicubic[rep0][orig0]',
+      // 遮罩区在三格里都涂黑，一眼看出哪块不参与比对
+      `[orig0]${chain}[orig]`,
+      `[rep0]${chain}[rep]`,
       '[orig]split=2[o1][o2]',
       '[rep]split=2[r1][r2]',
       // 差异层转灰度再提对比度：黑 = 完全一致，越亮 = 差得越多，无歧义。

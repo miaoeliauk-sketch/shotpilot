@@ -15,11 +15,7 @@ function project(): ReelProject {
     version: 1, id: 'p1', title: 'ref',
     source: { path: '/tmp/ref.mp4', filename: 'ref.mp4', duration: 60, width: 1280, height: 720, fps: 30, hasAudio: true, size: 1 },
     shots: [shot],
-    words: [
-      { text: '这', start: 5.2, end: 5.5 }, { text: '周', start: 5.5, end: 5.8 },
-      { text: '末', start: 5.8, end: 6.1 }, { text: '外', start: 40, end: 40.3 },
-    ],
-    audio: null, note: '', createdAt: '', updatedAt: '',
+    note: '', createdAt: '', updatedAt: '',
   };
 }
 
@@ -31,12 +27,8 @@ describe('shotManifest', () => {
     expect(m().canvas.aspectRatio).toBeCloseTo(1.7778, 3);
   });
 
-  it('口播时间戳转成镜头内相对时间，agent 不用自己减偏移', () => {
-    const words = m().narration.words;
-    expect(words[0]).toMatchObject({ text: '这', start: 0.2 });
-    // 落在镜头外的词不该混进来
-    expect(words.every((w) => w.start >= 0)).toBe(true);
-    expect(words).toHaveLength(3);
+  it('只管画面：不含口播字段', () => {
+    expect(m()).not.toHaveProperty('narration');
   });
 
   it('枚举翻成中文标签，agent 读得懂', () => {
@@ -78,8 +70,14 @@ describe('replicaInstructions', () => {
     expect(doc()).toContain('内容槽');
   });
 
-  it('带上口播原文', () => {
-    expect(doc()).toContain('这周末');
+  it('写明范围：只复刻画面，不管声音和口播字幕，但画面里的设计文字要复刻', () => {
+    expect(doc()).toContain('只复刻画面');
+    expect(doc()).toContain('不复刻口播字幕');
+    expect(doc()).toContain('画面设计里的文字要复刻');
+  });
+
+  it('告诉 agent 用 --mask 遮掉原片字幕，并按画布宽度给出示例', () => {
+    expect(doc()).toContain('--mask 0,610,1280,90');
   });
 });
 

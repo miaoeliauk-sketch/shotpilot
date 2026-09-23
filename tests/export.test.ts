@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { toMarkdown } from '../src/export/notes.js';
-import { toHandoffJson, toSvml } from '../src/export/svml.js';
+import { toHandoffJson } from '../src/export/handoff.js';
 import { emptyShot } from '../src/analyze/shots.js';
 import type { ReelProject } from '../src/core/types.js';
 
@@ -13,8 +13,6 @@ function project(): ReelProject {
     title: '测试片',
     source: { path: '/tmp/a.mp4', filename: 'a.mp4', duration: 6, width: 1080, height: 1920, fps: 30, hasAudio: true, size: 1000 },
     shots: [s1, s2],
-    words: [{ text: '你', start: 0.1, end: 0.4 }, { text: '好', start: 0.4, end: 0.8 }],
-    audio: { segments: [], beats: [], bpm: 120, method: 'test' },
     note: '整片备注',
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
@@ -37,42 +35,30 @@ describe('toMarkdown', () => {
     expect(md).not.toContain('medium-close');
   });
 
-  it('把镜头内的词拼成口播引文', () => {
-    expect(toMarkdown(project())).toContain('> 你好');
-  });
-});
-
-describe('toSvml', () => {
-  it('首行是已验证的处理指令，import 先于 body', () => {
-    const svml = toSvml(project());
-    const lines = svml.split('\n');
-    expect(lines[0]).toBe('<?svml using="@hypit/markup@1"?>');
-    expect(svml.indexOf('<import')).toBeLessThan(svml.indexOf('<script'));
+  it('带上逐镜备注和 B-roll 内容', () => {
+    const md = toMarkdown(project());
+    expect(md).toContain('开场钩子');
+    expect(md).toContain('B-roll 内容：产品特写');
   });
 
-  it('B-roll 用不同的段落标签', () => {
-    const svml = toSvml(project());
-    expect(svml).toContain('<broll ');
-    expect(svml).toContain('<segment ');
-  });
-
-  it('口播文本带角色提示', () => {
-    expect(toSvml(project())).toContain('<HOST>你好');
-  });
-
-  it('转义 XML 特殊字符，避免产出非法文档', () => {
-    const p = project();
-    p.shots[0]!.note = 'a < b & c > d';
-    const svml = toSvml(p);
-    expect(svml).toContain('a &lt; b &amp; c &gt; d');
+  it('只管画面：不出现声音和口播相关内容', () => {
+    const md = toMarkdown(project());
+    expect(md).not.toMatch(/BGM|BPM|口播|音频/);
   });
 });
 
 describe('toHandoffJson', () => {
-  it('带上镜头文本、时长和词级时间戳', () => {
+  it('带上镜头时长、画面标注和中文标签', () => {
     const data = JSON.parse(toHandoffJson(project()));
-    expect(data.shots[0].text).toBe('你好');
     expect(data.shots[0].duration).toBe(3);
-    expect(data.words).toHaveLength(2);
+    expect(data.shots[0].annotation.shotSize).toBe('medium-close');
+    expect(data.shots[0].labels.shotSize).toBe('中近景');
+  });
+
+  it('不含转写和音频字段', () => {
+    const data = JSON.parse(toHandoffJson(project()));
+    expect(data).not.toHaveProperty('words');
+    expect(data).not.toHaveProperty('audio');
+    expect(data.shots[0]).not.toHaveProperty('text');
   });
 });

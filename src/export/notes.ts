@@ -1,4 +1,4 @@
-import { formatTime, shotText, type ReelProject } from '../core/types.js';
+import { formatTime, type ReelProject } from '../core/types.js';
 import { labelOf } from '../core/vocabulary.js';
 
 /**
@@ -15,9 +15,6 @@ export function toMarkdown(project: ReelProject): string {
   lines.push(`- 源文件：\`${src.filename}\``);
   lines.push(`- 时长：${formatTime(src.duration)}　分辨率：${src.width}×${src.height}　帧率：${src.fps.toFixed(2)}`);
   lines.push(`- 镜头数：${project.shots.length}　已审：${project.shots.filter((s) => s.reviewed).length}`);
-  if (project.audio) {
-    lines.push(`- BGM：${project.audio.bpm ? `BPM ≈ ${project.audio.bpm}` : '未测出稳定节奏'}　音频段落 ${project.audio.segments.length} 段`);
-  }
   lines.push('');
 
   if (project.note.trim()) {
@@ -58,9 +55,6 @@ export function toMarkdown(project: ReelProject): string {
     for (const l of a.lighting ?? []) tags.push(labelOf('lighting', l));
     if (a.transitionIn) tags.push(`入:${labelOf('transitionIn', a.transitionIn)}`);
     if (tags.length > 0) lines.push(tags.join('　·　'), '');
-
-    const text = shotText(project, shot);
-    if (text) lines.push(`> ${text}`, '');
 
     if (shot.elements.length > 0) lines.push(`元素：${shot.elements.join('、')}`, '');
     if (shot.effects.length > 0) lines.push(`特效：${shot.effects.join('、')}`, '');

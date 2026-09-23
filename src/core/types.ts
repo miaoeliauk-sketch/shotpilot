@@ -1,5 +1,5 @@
 import type {
-  AudioKind, BrollNeed, CameraAngle, CameraMove, Composition,
+  BrollNeed, CameraAngle, CameraMove, Composition,
   FocalLength, Lighting, RollKind, ShotSize, Transition,
 } from './vocabulary.js';
 
@@ -22,42 +22,6 @@ export interface SourceMedia {
   container?: string;
   videoCodec?: string;
   audioCodec?: string;
-}
-
-/**
- * 逐词转写。时间戳是词级的，这是能和 hypit 对齐的关键：
- * hypit 的 SVML 把元素锚定在词上而不是秒上，所以词级时间戳是硬需求，
- * 句级字幕（普通 SRT）喂过去会丢掉 reflow 能力。
- */
-export interface Word {
-  text: string;
-  /** 秒 */
-  start: number;
-  end: number;
-  /** ASR 置信度 0–1，缺失表示未知 */
-  confidence?: number;
-  /** 说话人标识，做了分离才有 */
-  speaker?: string;
-}
-
-export interface AudioSegment {
-  start: number;
-  end: number;
-  kind: AudioKind;
-  /** 平均响度 dBFS，用于界面画能量条 */
-  loudness?: number;
-  /** 人工或识别出的曲目名/描述 */
-  label?: string;
-}
-
-export interface AudioAnalysis {
-  segments: AudioSegment[];
-  /** 检测到的节拍点（秒），用于对齐卡点剪辑 */
-  beats: number[];
-  /** 估算 BPM，无音乐时为 null */
-  bpm: number | null;
-  /** 分析用的方法，写清楚以免日后分不清数据是怎么来的 */
-  method: string;
 }
 
 /** 一个镜头上的结构化标注。全部可空——没标 ≠ 标了"无"。 */
@@ -141,22 +105,10 @@ export interface ReelProject {
   title: string;
   source: SourceMedia;
   shots: Shot[];
-  words: Word[];
-  audio: AudioAnalysis | null;
   /** 整片级别的备注 */
   note: string;
   createdAt: string;
   updatedAt: string;
-}
-
-/** 落在某镜头时间范围内的词。B-roll 拆解和 SVML 导出都要用。 */
-export function wordsInShot(project: ReelProject, shot: Shot): Word[] {
-  return project.words.filter((w) => w.start < shot.end && w.end > shot.start);
-}
-
-/** 镜头的口播文本 */
-export function shotText(project: ReelProject, shot: Shot): string {
-  return wordsInShot(project, shot).map((w) => w.text).join('').trim();
 }
 
 export function shotDuration(shot: Shot): number {
