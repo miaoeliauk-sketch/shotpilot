@@ -70,6 +70,7 @@ jobs:
             --app-bundle-id=com.shotpilot.app --app-category-type=public.app-category.video \
             --app-version="$(node -p "require('./package.json').version")"
           ls -la release/ShotPilot-darwin-arm64
+          ls -la release/ShotPilot-darwin-arm64/ShotPilot.app/Contents/Resources/app
 
       - name: 签名（本机签名）
         run: |

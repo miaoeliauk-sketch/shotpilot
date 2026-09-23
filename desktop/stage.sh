@@ -34,8 +34,14 @@ EOF
 echo "== 安装运行时依赖（渲染器 + 它的 Apple 芯片二进制）"
 (cd "$STAGE" && npm install --omit=dev --no-audit --no-fund)
 
-echo "== 下载渲染用的浏览器（chrome-headless-shell，放进 node_modules/.remotion）"
+echo "== 下载渲染用的浏览器（chrome-headless-shell）"
 (cd "$STAGE" && node --input-type=module -e "const r = await import('@remotion/renderer'); await r.ensureBrowser(); console.log('浏览器就绪')")
+# Remotion 下载到隐藏目录 node_modules/.remotion，打包工具会漏掉隐藏目录，挪到普通目录 chrome/
+CHROME_DIR="$(dirname "$(find "$STAGE/node_modules/.remotion" -name chrome-headless-shell -type f | head -1)")"
+[ -n "$CHROME_DIR" ] && [ -d "$CHROME_DIR" ] || { echo "没找到下载好的 chrome-headless-shell"; exit 1; }
+mv "$CHROME_DIR" "$STAGE/chrome"
+rm -rf "$STAGE/node_modules/.remotion"
+ls "$STAGE/chrome" | sed 's/^/   /'
 
 echo "== ffmpeg / ffprobe（Apple 芯片版）"
 TMP="$(mktemp -d)"

@@ -38,9 +38,9 @@ function pickPort(preferred) {
   });
 }
 
-/** 构建时 Remotion 把渲染用的浏览器下载到 node_modules/.remotion 里，找到那个可执行文件 */
+/** 渲染用的浏览器：构建时下载好放在 chrome/ 里（见 stage.sh），找到那个可执行文件 */
 function findChrome() {
-  const root = join(APP_DIR, 'node_modules', '.remotion');
+  const root = join(APP_DIR, 'chrome');
   const stack = [root];
   while (stack.length > 0) {
     const dir = stack.pop();
@@ -144,7 +144,7 @@ function selfCheck() {
   const missing = ['ffmpeg', 'ffprobe', 'yt-dlp'].filter((n) => !existsSync(join(BIN, n)));
   if (!findChrome()) missing.push('chrome-headless-shell');
   if (!existsSync(join(APP_DIR, 'dist', 'remotion-bundle', 'index.html'))) missing.push('remotion-bundle');
-  console.log(missing.length ? `缺少：${missing.join('、')}` : '自带组件齐全');
+  console.log(missing.length ? `缺少：${missing.join('、')}` : `自带组件齐全（渲染浏览器：${findChrome()}）`);
   app.exit(missing.length ? 1 : 0);
 }
 

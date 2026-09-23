@@ -19,7 +19,7 @@ echo "== 1. 自检"
 "$EXE" --self-check || fail "自带组件不全"
 
 echo "== 2. 用软件自带的 Node 起服务"
-CHROME="$(find "$RES/node_modules/.remotion" -name chrome-headless-shell -type f | head -1)"
+CHROME="$(find "$RES/chrome" -name chrome-headless-shell -type f | head -1)"
 PORT=5190
 SHOTPILOT_PORT=$PORT SHOTPILOT_DATA="$WORK/data" \
   SHOTPILOT_FFMPEG="$RES/bin/ffmpeg" SHOTPILOT_FFPROBE="$RES/bin/ffprobe" SHOTPILOT_YTDLP="$RES/bin/yt-dlp" \
