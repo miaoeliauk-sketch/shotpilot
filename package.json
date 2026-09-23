@@ -15,7 +15,9 @@
     "replica": "tsx src/replica-cli.ts",
     "compare": "tsx src/compare-cli.ts",
     "build:templates": "tsx scripts/build-templates.ts",
-    "build:ui": "tsx scripts/build-ui.ts"
+    "build:ui": "tsx scripts/build-ui.ts",
+    "build:server": "tsx scripts/build-server.ts",
+    "build": "pnpm build:ui && pnpm build:templates && pnpm build:server"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.527",

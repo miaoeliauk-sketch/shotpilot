@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { dataDir } from '../core/paths.js';
+import { FFMPEG, FFPROBE } from './ffmpeg.js';
 
 /**
  * 从链接下载视频（抖音、B 站、YouTube 等），靠本机的 yt-dlp。
@@ -67,6 +68,9 @@ function attempt(
       '--print', 'after_move:%(.{filepath,title})j',
     ];
     if (cookiesFrom) args.push('--cookies-from-browser', cookiesFrom);
+    // Mac 软件里 ffmpeg 和 ffprobe 放在同一个自带目录，告诉 yt-dlp 去那里找（合并音视频要用）。
+    // 开发时它们分散在两个 npm 包里，就让 yt-dlp 用系统里的
+    if (isAbsolute(FFMPEG) && dirname(FFMPEG) === dirname(FFPROBE)) args.push('--ffmpeg-location', dirname(FFMPEG));
     args.push(url);
 
     const child = spawn(YTDLP, args, { stdio: ['ignore', 'pipe', 'pipe'] });

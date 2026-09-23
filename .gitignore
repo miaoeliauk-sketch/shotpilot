@@ -14,3 +14,8 @@ assets/
 renders/
 # 构建产物
 web/js/studio.js
+# Mac 软件打包的中间产物
+app-stage/
+release/
+icon.iconset/
+desktop/icon.icns
