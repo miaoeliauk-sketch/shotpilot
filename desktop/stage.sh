@@ -8,7 +8,7 @@ STAGE="$ROOT/app-stage"
 VERSION="$(node -p "require('$ROOT/package.json').version")"
 REMOTION_VERSION="$(node -p "require('$ROOT/node_modules/@remotion/renderer/package.json').version")"
 
-echo "== 准备 app-stage（版本 $VERSION，Remotion $REMOTION_VERSION）"
+echo "== 准备 app-stage（版本 ${VERSION}，Remotion ${REMOTION_VERSION}）"
 rm -rf "$STAGE"
 mkdir -p "$STAGE/bin" "$STAGE/dist" "$STAGE/templates" "$STAGE/desktop"
 cp -R "$ROOT/dist/server" "$ROOT/dist/remotion-bundle" "$STAGE/dist/"

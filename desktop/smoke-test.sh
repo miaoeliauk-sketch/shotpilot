@@ -41,7 +41,7 @@ for req in "$WORK/req/"*.json; do
   grep -q '^event: done' "$WORK/$name.sse" || { cat "$WORK/$name.sse"; fail "$name 导出失败"; }
   file="$(grep -A1 '^event: done' "$WORK/$name.sse" | sed -n 's/^data: //p' | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>console.log(JSON.parse(s).file))')"
   dur="$("$RES/bin/ffprobe" -v error -show_entries format=duration -of csv=p=0 "$file")"
-  echo "   $name：${dur} 秒，用时 $(( $(date +%s) - started )) 秒"
+  echo "   ${name}：${dur} 秒，用时 $(( $(date +%s) - started )) 秒"
   "$RES/bin/ffmpeg" -v error -y -ss 0.5 -i "$file" -frames:v 1 "$OUT/render-$name.png"
 done
 
