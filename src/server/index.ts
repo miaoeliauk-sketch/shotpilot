@@ -15,9 +15,13 @@ import { listProjects, loadProject, saveProject, thumbsDir } from '../core/proje
 import { DIMENSIONS } from '../core/vocabulary.js';
 import { toMarkdown } from '../export/notes.js';
 import { toHandoffJson } from '../export/handoff.js';
+import { renderTemplate } from '../export/render.js';
+import { dataDir } from '../core/paths.js';
+import { createWork, deleteWork, listWorks, loadWork, saveAsset, saveWork } from '../core/works.js';
 import type { ReelProject, Shot } from '../core/types.js';
 
 const WEB_ROOT = resolve(fileURLToPath(new URL('../../web', import.meta.url)));
+const TEMPLATE_PUBLIC = resolve(fileURLToPath(new URL('../../templates/public', import.meta.url)));
 const PORT = Number(process.env.SHOTPILOT_PORT ?? 5174);
 
 const MIME: Record<string, string> = {
@@ -26,7 +30,10 @@ const MIME: Record<string, string> = {
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
   '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
   '.png': 'image/png',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
   '.svg': 'image/svg+xml',
   '.mp4': 'video/mp4',
   '.mov': 'video/quicktime',
@@ -125,6 +132,139 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse, pathname: 
   streamFile(req, res, target);
 }
 
+/**
+ * 用户数据和模板示例图。只允许读指定目录里的单层文件名，挡住 .. 穿越。
+ * /files/assets/…  上传的图片；/files/renders/…  导出的视频；/template-assets/…  模板自带的示例图
+ */
+function serveDataFile(req: IncomingMessage, res: ServerResponse, pathname: string): boolean {
+  let base: string | null = null;
+  let rel = '';
+  const m = /^\/files\/(assets|renders)\/(.+)$/.exec(pathname);
+  if (m?.[1] && m[2]) {
+    base = dataDir(m[1] as 'assets' | 'renders');
+    rel = decodeURIComponent(m[2]);
+    if (rel.includes('/') || rel.includes('\\')) { sendError(res, 400, '非法文件名'); return true; }
+  } else if (pathname.startsWith('/template-assets/')) {
+    base = TEMPLATE_PUBLIC;
+    rel = decodeURIComponent(pathname.slice('/template-assets/'.length));
+  }
+  if (!base) return false;
+  const target = resolve(base, rel);
+  if (!target.startsWith(base + '/')) { sendError(res, 403, '路径越界'); return true; }
+  streamFile(req, res, target);
+  return true;
+}
+
+/** 上传图片用：原始字节，不是 JSON */
+async function readRawBody(req: IncomingMessage, limit: number): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > limit) throw new Error(`文件太大（超过 ${Math.round(limit / 1024 / 1024)}MB）`);
+    chunks.push(chunk as Buffer);
+  }
+  return Buffer.concat(chunks);
+}
+
+/** 同一时间只导出一条：渲染会占满 CPU，并发只会一起变慢 */
+let rendering = false;
+
+async function handleTemplateApi(req: IncomingMessage, res: ServerResponse, parts: string[]): Promise<boolean> {
+  // ── 我的作品 ──
+  if (parts[1] === 'works') {
+    const id = parts[2];
+    if (!id && req.method === 'GET') { sendJson(res, 200, await listWorks()); return true; }
+    if (!id && req.method === 'POST') {
+      const body = (await readBody(req)) as Record<string, unknown>;
+      if (typeof body.templateId !== 'string' || typeof body.params !== 'object' || body.params === null) {
+        sendError(res, 400, '缺少模板或参数'); return true;
+      }
+      const name = typeof body.name === 'string' ? body.name : '';
+      sendJson(res, 200, await createWork(body.templateId, name, body.params as Record<string, unknown>));
+      return true;
+    }
+    if (!id) return false;
+    try {
+      if (req.method === 'GET') { sendJson(res, 200, await loadWork(id)); return true; }
+      if (req.method === 'PUT') {
+        const body = (await readBody(req)) as Record<string, unknown>;
+        const work = await loadWork(id);
+        if (typeof body.name === 'string') work.name = body.name.trim() || work.name;
+        if (typeof body.params === 'object' && body.params !== null) work.params = body.params as Record<string, unknown>;
+        sendJson(res, 200, await saveWork(work));
+        return true;
+      }
+      if (req.method === 'DELETE') { await deleteWork(id); sendJson(res, 200, { ok: true }); return true; }
+    } catch (err) {
+      sendError(res, 404, err instanceof Error ? err.message : '作品不存在');
+      return true;
+    }
+    return false;
+  }
+
+  // ── 上传图片 ──  POST /api/assets，请求头 x-filename 带原文件名（URL 编码）
+  if (parts[1] === 'assets' && req.method === 'POST') {
+    try {
+      const name = decodeURIComponent(String(req.headers['x-filename'] ?? 'image.png'));
+      const data = await readRawBody(req, 60 * 1024 * 1024);
+      if (data.length === 0) { sendError(res, 400, '没有收到图片'); return true; }
+      sendJson(res, 200, { url: await saveAsset(data, name) });
+    } catch (err) {
+      sendError(res, 400, err instanceof Error ? err.message : '上传失败');
+    }
+    return true;
+  }
+
+  // ── 导出视频 ──  POST /api/render {compositionId, inputProps, name, workId?}，SSE 推进度
+  if (parts[1] === 'render' && req.method === 'POST') {
+    const body = (await readBody(req)) as Record<string, unknown>;
+    if (typeof body.compositionId !== 'string' || typeof body.inputProps !== 'object' || body.inputProps === null) {
+      sendError(res, 400, '缺少模板或参数'); return true;
+    }
+    if (rendering) { sendError(res, 409, '正在导出另一条视频，等它完成再试'); return true; }
+    rendering = true;
+    res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', connection: 'keep-alive' });
+    const emit = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    try {
+      const file = await renderTemplate({
+        compositionId: body.compositionId,
+        inputProps: body.inputProps as Record<string, unknown>,
+        name: typeof body.name === 'string' ? body.name : '未命名作品',
+        origin: `http://127.0.0.1:${PORT}`,
+      }, (message, percent) => emit('progress', { message, percent }));
+      if (typeof body.workId === 'string') {
+        try {
+          const work = await loadWork(body.workId);
+          work.lastRender = file;
+          await saveWork(work);
+        } catch { /* 作品被删了也不影响导出结果 */ }
+      }
+      revealInFinder(file);
+      emit('done', { file, url: `/files/renders/${encodeURIComponent(file.split('/').pop() ?? '')}` });
+    } catch (err) {
+      emit('failed', { message: err instanceof Error ? err.message : String(err) });
+    } finally {
+      rendering = false;
+    }
+    res.end();
+    return true;
+  }
+
+  // ── 在访达里显示 ──  只允许用户数据目录里的东西
+  if (parts[1] === 'reveal' && req.method === 'POST') {
+    const body = (await readBody(req)) as Record<string, unknown>;
+    const target = typeof body.path === 'string' ? resolve(body.path) : dataDir('renders');
+    const allowed = (['renders', 'works', 'assets', 'replicaOut', 'projects', 'downloads'] as const).map((k) => dataDir(k));
+    if (!allowed.some((dir) => target === dir || target.startsWith(dir + '/'))) { sendError(res, 403, '只能打开 ShotPilot 自己的文件夹'); return true; }
+    revealInFinder(target);
+    sendJson(res, 200, { ok: true });
+    return true;
+  }
+
+  return false;
+}
+
 /** 只允许改这些字段，防止前端随手把 id/start/end 覆盖掉造成数据错乱。 */
 const EDITABLE_SHOT_FIELDS = new Set([
   'roll', 'annotation', 'effects', 'elements', 'note', 'brollContent', 'reviewed',
@@ -169,6 +309,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     return true;
   }
 
+  if (await handleTemplateApi(req, res, parts)) return true;
   if (parts[1] !== 'projects') return false;
 
   // GET /api/projects
@@ -348,7 +489,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
         : '还没有标为 B-roll / 叠加层 / 字卡的镜头。先按 X 或 V 标出要复刻的镜头。');
       return true;
     }
-    const outRoot = resolve(process.env.SHOTPILOT_REPLICA_OUT ?? join(process.cwd(), 'replica-out'));
+    const outRoot = dataDir('replicaOut');
     res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', connection: 'keep-alive' });
     const emit = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     try {
@@ -437,6 +578,7 @@ const server = createServer((req, res) => {
   handleApi(req, res, url)
     .then((handled) => {
       if (handled) return;
+      if (serveDataFile(req, res, url.pathname)) return;
       return serveStatic(req, res, url.pathname);
     })
     .catch((err) => {

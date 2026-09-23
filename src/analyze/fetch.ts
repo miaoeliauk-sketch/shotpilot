@@ -1,7 +1,8 @@
 import { spawn } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
+import { dataDir } from '../core/paths.js';
 
 /**
  * 从链接下载视频（抖音、B 站、YouTube 等），靠本机的 yt-dlp。
@@ -11,9 +12,9 @@ import { join, resolve } from 'node:path';
 
 const YTDLP = process.env.SHOTPILOT_YTDLP ?? 'yt-dlp';
 
-/** 下载到哪。默认项目目录下的 downloads/，可用环境变量改。 */
+/** 下载到哪。位置规则见 paths.ts */
 export function downloadsDir(): string {
-  return resolve(process.env.SHOTPILOT_DOWNLOADS ?? join(process.cwd(), 'downloads'));
+  return dataDir('downloads');
 }
 
 /**

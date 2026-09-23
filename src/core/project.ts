@@ -1,12 +1,13 @@
 import { mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { basename, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { PROJECT_VERSION, type ReelProject, type SourceMedia } from './types.js';
+import { dataDir } from './paths.js';
 
-/** 所有拉片项目的根目录。可用环境变量改到别处（比如外置硬盘）。 */
+/** 所有拉片项目的根目录。位置规则见 paths.ts */
 export function projectsRoot(): string {
-  return resolve(process.env.SHOTPILOT_PROJECTS ?? join(process.cwd(), 'projects'));
+  return dataDir('projects');
 }
 
 export function projectDir(id: string): string {
