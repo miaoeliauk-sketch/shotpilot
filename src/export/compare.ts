@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import { FFMPEG, run } from '../analyze/ffmpeg.js';
 
 /**
@@ -18,6 +19,8 @@ export interface FrameScore {
 }
 
 export interface CompareReport {
+  /** 分格漂移检测结果，见 detectDrift。比对时未做分格检测则为 null。 */
+  drift: DriftReport | null;
   /** 全片平均 SSIM，0–1，越大越像 */
   meanSsim: number;
   minSsim: number;
@@ -27,6 +30,114 @@ export interface CompareReport {
   /** 是否达到可交付标准 */
   passed: boolean;
   threshold: { mean: number; min: number };
+}
+
+export interface DriftTile {
+  row: number;
+  col: number;
+  /** 九宫格方位，给人读 */
+  region: string;
+  head: number;
+  tail: number;
+  increase: number;
+}
+
+export interface DriftReport {
+  drifting: boolean;
+  maxIncrease: number;
+  tiles: DriftTile[];
+}
+
+/** 判为漂移的误差增量阈值（0–255，在 320×180 缩略图上算）。
+ *  实测：投影静止的错误版本最大增量 +13.7，正确版本 +1.6。取 4 留足余量。 */
+export const DRIFT_THRESHOLD = 4;
+
+const REGION_NAMES = [
+  ['左上', '上方', '右上'],
+  ['左侧', '中央', '右侧'],
+  ['左下', '下方', '右下'],
+];
+
+/**
+ * 分格检测「越往后越不像」。
+ *
+ * 为什么不直接看全幅 SSIM 的首尾趋势：实测案例里投影在旋转、复刻是静止的，
+ * 投影区误差从 0.55 涨到 13.4，可全幅 SSIM 首尾反而是**上升**的——
+ * 字幕在中途换成了更短的句子，字幕区误差下降，把投影区的恶化整个盖住了。
+ * 画面不同区域的误差会朝相反方向变，平均一下就互相抵消。所以必须分格各看各的。
+ *
+ * 只报「增量」不报「减量」：误差变小（比如换了更短的字幕）不是问题。
+ *
+ * @param ref  原片逐帧灰度，每帧 w*h
+ * @param rend 复刻逐帧灰度
+ */
+export function detectDrift(
+  ref: Float32Array[], rend: Float32Array[], w: number, h: number,
+  grid = { cols: 8, rows: 6 }, threshold = DRIFT_THRESHOLD,
+): DriftReport {
+  const n = Math.min(ref.length, rend.length);
+  if (n < 6) return { drifting: false, maxIncrease: 0, tiles: [] };
+  const tw = Math.floor(w / grid.cols);
+  const th = Math.floor(h / grid.rows);
+  const third = Math.floor(n / 3);
+
+  const tileErr = (frame: number, row: number, col: number): number => {
+    const a = ref[frame] as Float32Array;
+    const b = rend[frame] as Float32Array;
+    let sum = 0;
+    for (let y = row * th; y < (row + 1) * th; y++) {
+      for (let x = col * tw; x < (col + 1) * tw; x++) sum += Math.abs((a[y * w + x] ?? 0) - (b[y * w + x] ?? 0));
+    }
+    return sum / (tw * th);
+  };
+
+  const tiles: DriftTile[] = [];
+  let maxIncrease = 0;
+  for (let row = 0; row < grid.rows; row++) {
+    for (let col = 0; col < grid.cols; col++) {
+      let head = 0, tail = 0;
+      for (let f = 0; f < third; f++) head += tileErr(f, row, col);
+      for (let f = n - third; f < n; f++) tail += tileErr(f, row, col);
+      head /= third; tail /= third;
+      const increase = tail - head;
+      maxIncrease = Math.max(maxIncrease, increase);
+      if (increase > threshold) {
+        const ry = Math.min(2, Math.floor((row + 0.5) / grid.rows * 3));
+        const rx = Math.min(2, Math.floor((col + 0.5) / grid.cols * 3));
+        tiles.push({
+          row, col, region: REGION_NAMES[ry]?.[rx] ?? '',
+          head: Number(head.toFixed(1)), tail: Number(tail.toFixed(1)), increase: Number(increase.toFixed(1)),
+        });
+      }
+    }
+  }
+  tiles.sort((a, b) => b.increase - a.increase);
+  return { drifting: tiles.length > 0, maxIncrease: Number(maxIncrease.toFixed(1)), tiles };
+}
+
+/** 把视频解码成缩小的逐帧灰度。二进制输出，不能走 run()（它按字符串收集 stdout）。 */
+export function decodeGray(path: string, w = 320, h = 180): Promise<Float32Array[]> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(FFMPEG, [
+      '-hide_banner', '-loglevel', 'error', '-i', path,
+      '-vf', `scale=${w}:${h}:flags=area,format=gray`, '-f', 'rawvideo', '-',
+    ], { stdio: ['ignore', 'pipe', 'pipe'] });
+    const chunks: Buffer[] = [];
+    let stderr = '';
+    child.stdout.on('data', (d: Buffer) => chunks.push(d));
+    child.stderr.on('data', (d) => { stderr += d.toString(); });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code !== 0) { reject(new Error(`解码失败：${stderr.trim().split('\n').slice(-3).join('\n')}`)); return; }
+      const buf = Buffer.concat(chunks);
+      const frameSize = w * h;
+      const frames: Float32Array[] = [];
+      for (let off = 0; off + frameSize <= buf.length; off += frameSize) {
+        frames.push(Float32Array.from(buf.subarray(off, off + frameSize)));
+      }
+      resolve(frames);
+    });
+  });
 }
 
 // ffmpeg ssim 滤镜的输出行形如：
@@ -59,6 +170,7 @@ export function summarize(
   const minSsim = sorted[0]?.ssim ?? 0;
 
   return {
+    drift: null,
     meanSsim: Number(meanSsim.toFixed(4)),
     minSsim: Number(minSsim.toFixed(4)),
     frameCount: scores.length,
@@ -94,7 +206,11 @@ export async function compareVideos(
 
   // ssim 的 stats_file=- 写到 stdout，汇总行在 stderr
   const scores = parseSsimLog(res.stdout || res.stderr);
-  return summarize(scores, opts.threshold);
+  const report = summarize(scores, opts.threshold);
+
+  const [ref, rend] = await Promise.all([decodeGray(originalPath), decodeGray(renderedPath)]);
+  report.drift = detectDrift(ref, rend, 320, 180);
+  return report;
 }
 
 /** 把报告渲染成给人和 agent 都好读的文本。 */
@@ -106,6 +222,19 @@ export function formatReport(report: CompareReport, fps = 10): string {
   lines.push(`- 最低单帧：**${report.minSsim}**（目标 ≥ ${report.threshold.min}）`);
   lines.push(`- 比对帧数：${report.frameCount}`);
   lines.push('');
+
+  if (report.drift?.drifting) {
+    const where = [...new Set(report.drift.tiles.map((t) => t.region))].join('、');
+    lines.push('### ⚠️ 局部越往后越不像');
+    lines.push('');
+    lines.push(`画面**${where}**的误差随时间持续变大（最大增量 +${report.drift.maxIncrease}）。`);
+    lines.push('原片那里很可能有东西在**缓慢运动**（投影旋转、缓慢推拉、颜色渐变），而复刻是静止的。');
+    lines.push('逐帧拟合那个区域的元素，看它的参数怎么随帧号变。');
+    lines.push('');
+    lines.push('> 这个问题全幅 SSIM 看不出来：其他区域的变化（比如字幕换句）会把它掩盖掉，');
+    lines.push('> 即使总分「达标」也要看这一节。');
+    lines.push('');
+  }
 
   if (!report.passed) {
     lines.push('### 最不像的几帧 —— 优先看这些');

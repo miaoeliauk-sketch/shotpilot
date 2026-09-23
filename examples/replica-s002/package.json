@@ -1,0 +1,21 @@
+{
+  "name": "replica-s002",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare-avatar": "python3 scripts/prepare-avatar.py",
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts AvatarCard out.mp4",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.527",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.527"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^5.7.0"
+  }
+}

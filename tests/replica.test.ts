@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { replicaInstructions, shotManifest } from '../src/export/replica.js';
+import { replicaInstructions, safeClipDuration, shotManifest } from '../src/export/replica.js';
 import { emptyShot } from '../src/analyze/shots.js';
 import type { ReelProject } from '../src/core/types.js';
 
@@ -80,5 +80,32 @@ describe('replicaInstructions', () => {
 
   it('带上口播原文', () => {
     expect(doc()).toContain('这周末');
+  });
+});
+
+describe('safeClipDuration', () => {
+  it('终点往回让半帧，避免截进下一个镜头的第一帧', () => {
+    // 实测镜头：终点是无限小数，toFixed(3) 会把时长向上舍入越过切点
+    const shot = { start: 70.466667, end: 72.633333 };
+    const raw = shot.end - shot.start;
+    expect(Number(raw.toFixed(3))).toBeGreaterThan(raw);          // 复现：舍入后越界
+    const safe = safeClipDuration(shot, 30);
+    expect(Number(safe.toFixed(3))).toBeLessThan(raw);             // 修复后：舍入后仍在界内
+    expect(raw - safe).toBeCloseTo(1 / 60, 6);                     // 只让半帧
+  });
+
+  it('不会丢掉本镜头的最后一帧', () => {
+    // 3 秒 @30fps = 90 帧，最后一帧时间戳 2.9667；让半帧后终点 2.9833 仍大于它
+    const safe = safeClipDuration({ start: 0, end: 3 }, 30);
+    expect(safe).toBeGreaterThan(89 / 30);
+  });
+
+  it('帧率未知时退回原始时长', () => {
+    expect(safeClipDuration({ start: 1, end: 3 }, 0)).toBe(2);
+    expect(safeClipDuration({ start: 1, end: 3 }, NaN)).toBe(2);
+  });
+
+  it('时长不会变成负数', () => {
+    expect(safeClipDuration({ start: 5, end: 5.01 }, 30)).toBe(0);
   });
 });

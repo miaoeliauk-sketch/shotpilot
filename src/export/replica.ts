@@ -16,6 +16,21 @@ import { labelOf } from '../core/vocabulary.js';
  *   - **槽位定义**决定产出是一次性复刻还是可复用的预设。
  */
 
+/**
+ * 镜头可安全截取的时长：终点往回让半帧。
+ *
+ * 镜头终点就是下一个镜头第一帧的时间戳（场景检测给的是切点）。
+ * 若直接用 end - start 当 -t，再经 toFixed(3) 四舍五入，时长可能多出零点几毫秒，
+ * 刚好把下一个镜头的第一帧也截进来——实测一条 2.17 秒的镜头因此多了一帧完全无关的画面，
+ * 复刻比对时这一帧整张都算错。让半帧（30fps 下 16.7ms）远大于任何舍入误差，
+ * 又不会丢掉本镜头的最后一帧。
+ */
+export function safeClipDuration(shot: Pick<Shot, 'start' | 'end'>, fps: number): number {
+  const raw = Math.max(0, shot.end - shot.start);
+  if (!Number.isFinite(fps) || fps <= 0) return raw;
+  return Math.max(0, raw - 0.5 / fps);
+}
+
 export interface ReplicaOptions {
   /** 帧序列的采样率。10fps 足够看清动效，又不会让 agent 被几百张图淹没。 */
   fps?: number;
@@ -25,10 +40,10 @@ export interface ReplicaOptions {
 
 /** 抽出镜头的逐帧序列。动效分析全靠它。 */
 async function extractFrameSequence(
-  videoPath: string, shot: Shot, outDir: string, opts: Required<ReplicaOptions>,
+  videoPath: string, shot: Shot, outDir: string, opts: Required<ReplicaOptions>, sourceFps: number,
 ): Promise<number> {
   await mkdir(outDir, { recursive: true });
-  const duration = shot.end - shot.start;
+  const duration = safeClipDuration(shot, sourceFps);
   await runOrThrow(FFMPEG, [
     '-hide_banner', '-nostats', '-loglevel', 'error',
     '-ss', shot.start.toFixed(3),
@@ -41,11 +56,11 @@ async function extractFrameSequence(
 }
 
 /** 裁出原片这一段。渲染比对的基准，没有它整个迭代闭环就断了。 */
-async function extractClip(videoPath: string, shot: Shot, outPath: string): Promise<void> {
+async function extractClip(videoPath: string, shot: Shot, outPath: string, sourceFps: number): Promise<void> {
   await runOrThrow(FFMPEG, [
     '-hide_banner', '-nostats', '-loglevel', 'error',
     '-ss', shot.start.toFixed(3),
-    '-t', (shot.end - shot.start).toFixed(3),
+    '-t', safeClipDuration(shot, sourceFps).toFixed(3),
     '-i', videoPath,
     // 重新编码而不是 -c copy：copy 会从最近的关键帧开始，头几帧可能不是我们要的那一段
     '-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
@@ -175,6 +190,23 @@ pnpm compare --rendered out.mp4 --original clip.mp4
 
 目标：平均 SSIM ≥ 0.90，且没有单帧低于 0.80。达不到就继续迭代。
 
+**但 SSIM 达标不等于像。** 大面积平坦背景会把全幅分数撑高——实测案例在投影方向错误、
+字幕明显不对的时候全幅 SSIM 就已经 0.976 了。一定要：
+
+- 用 \`--diff\` 生成三联对比视频，**看**差异图里哪里亮
+- 按区域（背景 / 主体 / 装饰 / 文字）分别算误差，别只看一个总分
+- 看报告里的「时间趋势」，越往后越差说明有动效没还原
+
+## 常见陷阱
+
+这四个都在真实复刻里踩过：
+
+1. **别假设它是静止的。** 边框不动不代表投影不动。拟合完看误差随帧号怎么变——线性增长就是有东西在动。
+2. **别假设元素之间有关系。** 看起来同心的两个圆，实测中心差 1px、半径也不是估的那个。每个元素独立测量。
+3. **找边缘别用亮度阈值。** 抗锯齿会让阈值法系统性地低估尺寸。沿法线方向找亮度变化最陡的位置。
+4. **字形对不上时，像素指标会偏爱画得更淡。** 字体不同，笔画天然错位，多画一笔会被扣两次分，
+   所以误差最低的候选往往又细又空。这种时候按肉眼选，并说明原因。
+
 ## 交付
 
 1. Remotion 组件代码，槽位暴露成 props
@@ -204,8 +236,9 @@ export async function buildReplicaPackage(
   const dir = join(outputRoot, `replica-${shot.id}`);
   await mkdir(dir, { recursive: true });
 
-  const frameCount = await extractFrameSequence(project.source.path, shot, join(dir, 'frames'), opts);
-  await extractClip(project.source.path, shot, join(dir, 'clip.mp4'));
+  const fps = project.source.fps;
+  const frameCount = await extractFrameSequence(project.source.path, shot, join(dir, 'frames'), opts, fps);
+  await extractClip(project.source.path, shot, join(dir, 'clip.mp4'), fps);
 
   const manifest = shotManifest(project, shot, frameCount, opts);
   await writeFile(join(dir, 'shot.json'), JSON.stringify(manifest, null, 2), 'utf8');

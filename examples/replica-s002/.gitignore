@@ -1,0 +1,5 @@
+node_modules/
+out.mp4
+# 原片素材与由它派生的头像帧不入库：仓库是公开的，这些是别人的内容
+clip.mp4
+public/avatar/

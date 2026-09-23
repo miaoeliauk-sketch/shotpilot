@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatReport, parseSsimLog, summarize } from '../src/export/compare.js';
+import { detectDrift, formatReport, parseSsimLog, summarize } from '../src/export/compare.js';
 
 const SAMPLE = `n:1 Y:0.815279 U:0.770129 V:0.749061 All:0.796718 (6.919008)
 n:2 Y:0.915658 U:0.870368 V:0.849162 All:0.897027 (6.925618)
@@ -64,5 +64,57 @@ describe('formatReport', () => {
     const out = formatReport(summarize([{ frame: 1, ssim: 0.97 }]));
     expect(out).toContain('✅ 达标');
     expect(out).not.toContain('优先看这些');
+  });
+});
+
+describe('detectDrift（分格漂移检测）', () => {
+  const W = 32, H = 18;
+  /** 造一段视频：每帧灰度 = base，并允许指定某块区域逐帧变化 */
+  const video = (n: number, paint: (f: number, x: number, y: number) => number) =>
+    Array.from({ length: n }, (_, f) => {
+      const a = new Float32Array(W * H);
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) a[y * W + x] = paint(f, x, y);
+      return a;
+    });
+  const grid = { cols: 4, rows: 3 };
+
+  it('局部区域越来越不像时报警，并说出在哪', () => {
+    const ref = video(30, () => 200);
+    // 右上角那块在复刻里是静止的，而原片逐帧变暗——模拟投影在转
+    const refMoving = video(30, (f, x, y) => (x >= 24 && y < 6 ? 200 - f * 1.5 : 200));
+    const r = detectDrift(refMoving, ref, W, H, grid, 4);
+    expect(r.drifting).toBe(true);
+    expect(r.tiles[0]?.region).toBe('右上');
+  });
+
+  it('另一区域同时变好时依然能抓住——这是全幅指标漏掉的场景', () => {
+    // 右上越来越差，同时下方（字幕区）越来越好，全幅平均几乎不变
+    const refV = video(30, (f, x, y) => (x >= 24 && y < 6 ? 200 - f * 1.5 : y >= 12 ? 200 : 200));
+    const rend = video(30, (f, x, y) => (y >= 12 ? 200 - (30 - f) * 1.5 : 200));
+    const r = detectDrift(refV, rend, W, H, grid, 4);
+    expect(r.drifting).toBe(true);
+    expect(r.tiles.some((t) => t.region === '右上')).toBe(true);
+    // 变好的区域不报
+    expect(r.tiles.every((t) => !t.region.includes('下'))).toBe(true);
+  });
+
+  it('误差恒定（哪怕很大）时不报——那是静态偏差，不是漂移', () => {
+    const r = detectDrift(video(30, () => 200), video(30, () => 150), W, H, grid, 4);
+    expect(r.drifting).toBe(false);
+  });
+
+  it('帧数太少时不判断', () => {
+    expect(detectDrift(video(4, () => 0), video(4, () => 255), W, H, grid).drifting).toBe(false);
+  });
+});
+
+describe('formatReport 漂移提示', () => {
+  it('有漂移时即使总分达标也会提示', () => {
+    const r = summarize([{ frame: 1, ssim: 0.99 }, { frame: 2, ssim: 0.99 }]);
+    r.drift = { drifting: true, maxIncrease: 13.7, tiles: [{ row: 3, col: 5, region: '右侧', head: 1.8, tail: 15.5, increase: 13.7 }] };
+    const out = formatReport(r, 30);
+    expect(out).toContain('✅ 达标');
+    expect(out).toContain('局部越往后越不像');
+    expect(out).toContain('右侧');
   });
 });
