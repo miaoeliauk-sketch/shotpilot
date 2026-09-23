@@ -1,7 +1,7 @@
 #!/bin/bash
 # 双击启动 ShotPilot 拉片工作台。不用敲任何命令。
 #
-# 它会：尝试更新（连不上 GitHub 就跳过）→ 依赖有变化才重装 → 关掉没关的旧服务
+# 它会：尝试更新（连不上 GitHub 就用「下载」里的更新包，都没有就跳过）→ 依赖有变化才重装 → 关掉没关的旧服务
 #       → 启动工作台 → 自动打开浏览器。用完直接关掉这个窗口即可。
 
 # 找到项目目录。从桌面上的快捷方式启动时 $0 在桌面，退回默认位置
@@ -50,7 +50,20 @@ if wait "$PULL_PID"; then
     echo "    已经是最新版本"
   fi
 else
-  echo "    这次没连上 GitHub，先用现有版本"
+  # 连不上 GitHub 时，用「下载」里的更新包（shotpilot-update.bundle，重复下载的也算）。
+  # 更新包不能双击打开，放在「下载」里就行，这里会自动用上；旧的包再用一次也不会出问题
+  BUNDLE="$(ls -t "$HOME/Downloads"/shotpilot-update*.bundle 2>/dev/null | head -1)"
+  if [ -n "$BUNDLE" ] && git pull --ff-only --quiet "$BUNDLE" main >>/tmp/shotpilot-update.log 2>&1; then
+    if [ "$(git rev-parse HEAD 2>/dev/null)" != "$BEFORE" ]; then
+      echo "    没连上 GitHub，已用「下载」里的更新包更新"
+    else
+      echo "    没连上 GitHub；「下载」里的更新包也不比现有版本新，先用现有版本"
+    fi
+  elif grep -q "local changes" /tmp/shotpilot-update.log 2>/dev/null; then
+    echo "    你改过的文件和这次更新冲突了，先用现有版本（把截图发给 AI 处理）"
+  else
+    echo "    这次没连上 GitHub，先用现有版本"
+  fi
 fi
 kill "$WATCHER" 2>/dev/null
 
