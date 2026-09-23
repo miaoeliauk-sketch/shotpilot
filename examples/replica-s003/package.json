@@ -1,0 +1,23 @@
+{
+  "name": "replica-s003",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts DialogueShot out.mp4",
+    "render:replica": "remotion render src/index.ts DialogueShot out.mp4 --props=replica-props.json",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.527",
+    "@remotion/zod-types": "4.0.527",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "remotion": "4.0.527",
+    "zod": "4.5.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,6 @@
+node_modules/
+out.mp4
+# 原片片段和从它反推出的底图不入库：仓库是公开的，这些是别人的内容
+clip.mp4
+public/plate.jpg
+public/plate-zoom.jpg

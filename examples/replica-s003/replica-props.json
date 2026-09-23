@@ -1,0 +1,17 @@
+{
+  "image": "plate.jpg",
+  "zoomImage": "plate-zoom.jpg",
+  "camera": {
+    "startScale": 3.2335,
+    "startRotation": 29.908,
+    "focusX": 640,
+    "focusY": 360,
+    "restScale": 0.9989,
+    "restRotation": 0.026,
+    "endScale": 1.198,
+    "zoomOut": { "start": -1, "end": 97.74, "easing": [1, -0.031, 0, 1.014] },
+    "unrotate": { "start": 0, "end": 96.43, "easing": [1, -0.056, 0, 0.999] },
+    "pushIn": { "start": 147.64, "end": 200.95, "easing": [1, 0.046, 0, 0.966] },
+    "zoomImageFade": [45, 56]
+  }
+}

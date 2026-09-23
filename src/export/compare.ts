@@ -270,6 +270,7 @@ export function formatReport(report: CompareReport, fps = 10): string {
     lines.push(`画面**${where}**的误差随时间持续变大（最大增量 +${report.drift.maxIncrease}）。`);
     lines.push('原片那里很可能有东西在**缓慢运动**（投影旋转、缓慢推拉、颜色渐变），而复刻是静止的。');
     lines.push('逐帧拟合那个区域的元素，看它的参数怎么随帧号变。');
+    lines.push('也可能是那块区域后半段才出现的元素（例如字体对不上的文字）把误差拉高了，先看差异视频分清是哪种。');
     lines.push('');
     lines.push('> 这个问题全幅 SSIM 看不出来：其他区域的变化（比如字幕换句）会把它掩盖掉，');
     lines.push('> 即使总分「达标」也要看这一节。');
