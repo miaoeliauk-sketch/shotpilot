@@ -119,3 +119,14 @@ jobs:
           else
             gh release create mac-latest release/ShotPilot.dmg --title "ShotPilot Mac 版（最新）" --notes "$NOTE" --prerelease
           fi
+
+      - name: 发布测试截图（开发用）
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ -d smoke-out ] || exit 0
+          if ! gh release view ci-smoke >/dev/null 2>&1; then
+            gh release create ci-smoke --title "自动测试截图（开发用，不用下载）" --notes "每次构建在 Mac 上跑冒烟测试留下的截图和日志" --prerelease
+          fi
+          gh release upload ci-smoke smoke-out/* --clobber

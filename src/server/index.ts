@@ -41,11 +41,16 @@ const MIME: Record<string, string> = {
   '.mkv': 'video/x-matroska',
 };
 
-/** 在访达里打开一个目录。只在 Mac 上做；其他系统静默跳过。 */
-function revealInFinder(dir: string): void {
+/**
+ * 在访达里显示。目录就打开它；文件就打开所在目录并选中它（open -R），
+ * 不能对文件直接 open：那会用默认程序（QuickTime）播放，而不是在访达里显示。
+ * 只在 Mac 上做；其他系统静默跳过。
+ */
+function revealInFinder(target: string): void {
   if (process.platform !== 'darwin') return;
   try {
-    spawn('open', [dir], { stdio: 'ignore', detached: true }).unref();
+    const isFile = existsSync(target) && statSync(target).isFile();
+    spawn('open', isFile ? ['-R', target] : [target], { stdio: 'ignore', detached: true }).unref();
   } catch {
     // 打不开访达不影响导出本身
   }
