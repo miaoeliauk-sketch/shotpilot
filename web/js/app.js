@@ -20,6 +20,33 @@ const fmt = (s) => {
 };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+/**
+ * 输入状态提示。
+ *
+ * 焦点落进备注/元素这些文本框时，所有标注快捷键都会让路——这是对的，
+ * 否则打字会触发标注。但如果不告诉用户，快捷键就是**静默失效**：
+ * 按 Z 按 6 都没反应，界面上却没有任何解释。这条提示让它可见。
+ */
+function setTypingIndicator(typing) {
+  const bar = document.getElementById('keyhint');
+  if (!bar) return;
+  bar.innerHTML = typing
+    ? '<b style="color:var(--broll)">正在输入文字 · 快捷键已暂停</b>　按 Esc 或点视频区域退出输入'
+    : '空格 播放/暂停　←→ 切镜头　<b>S 补刀</b>　<b>M 并入上一个</b>　Enter 已审并下一个';
+}
+
+document.addEventListener('focusin', (e) => {
+  const tag = e.target?.tagName;
+  setTypingIndicator(tag === 'INPUT' || tag === 'TEXTAREA');
+});
+document.addEventListener('focusout', () => {
+  // 延后一拍：焦点在两个输入框之间跳时不要闪
+  setTimeout(() => {
+    const a = document.activeElement;
+    setTypingIndicator(!!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA'));
+  }, 0);
+});
+
 function toast(message) {
   const el = document.createElement('div');
   el.className = 'toast';
@@ -159,7 +186,7 @@ function renderWorkbench() {
         <div class="transport">
           <span class="time" id="clock">00:00.0</span>
           <span class="grow"></span>
-          <span class="meta">空格 播放/暂停　←→ 切镜头　<b>S 当前位置补刀</b>　<b>M 并入上一个</b>　Enter 已审并下一个</span>
+          <span class="meta" id="keyhint">空格 播放/暂停　←→ 切镜头　<b>S 补刀</b>　<b>M 并入上一个</b>　Enter 已审并下一个</span>
         </div>
       </div>
       <div class="strip"><div class="filmstrip" id="strip"></div></div>
@@ -315,28 +342,61 @@ function toggleTerm(field, value, multi) {
   renderSide();
 }
 
-/** 文本框防抖保存，避免每敲一个字就打一次接口 */
-function queueSave() {
-  clearTimeout(state.saveTimer);
-  state.saveTimer = setTimeout(() => {
-    const side = root.querySelector('#side');
-    if (!side) return;
-    const split = (v) => v.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
-    patchShot({
-      elements: split(side.querySelector('#elements').value),
-      effects: split(side.querySelector('#effects').value),
-      brollContent: side.querySelector('#brollContent').value,
-      note: side.querySelector('#note').value,
-    });
-  }, 600);
+/** 把当前面板里的文本字段读出来。必须在面板被重新渲染之前调用。 */
+function readTextFields() {
+  const side = root.querySelector('#side');
+  if (!side?.querySelector('#note')) return null;
+  const split = (v) => v.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
+  return {
+    elements: split(side.querySelector('#elements').value),
+    effects: split(side.querySelector('#effects').value),
+    brollContent: side.querySelector('#brollContent').value,
+    note: side.querySelector('#note').value,
+  };
 }
 
-async function patchShot(patch) {
-  const shot = activeShot();
-  if (!shot) return;
+/**
+ * 文本框防抖保存。
+ *
+ * 目标镜头在**排队那一刻**就锁定，不在定时器触发时才去读 activeShot()——
+ * 否则打完字 600ms 内切了镜头，定时器读到的是新镜头的空文本框、写给的也是新镜头，
+ * 旧镜头的备注就这么丢了。拉片的节奏正是「写一句 → 马上下一个」，这个窗口天天会撞上。
+ */
+function queueSave() {
+  const shotId = activeShot()?.id;
+  if (!shotId) return;
+  clearTimeout(state.saveTimer);
+  state.pendingSave = { shotId };
+  state.saveTimer = setTimeout(flushSave, 600);
+}
+
+/** 立即执行排队中的保存。切镜头、离开页面前必须调用。 */
+function flushSave() {
+  clearTimeout(state.saveTimer);
+  state.saveTimer = null;
+  const pending = state.pendingSave;
+  state.pendingSave = null;
+  if (!pending) return;
+  const fields = readTextFields();
+  if (fields) patchShot(fields, pending.shotId);
+}
+
+// 关页面/刷新前把没存的备注冲出去，别让最后一句白写
+window.addEventListener('beforeunload', flushSave);
+
+/**
+ * 保存镜头改动。
+ *
+ * shotId 显式传入，响应回来后**按 id 找位置**写回，而不是写到 activeIndex——
+ * 等服务器响应的那几十毫秒里用户可能已经切了镜头，按 activeIndex 写会把
+ * 旧镜头的数据覆盖到新镜头上。
+ */
+async function patchShot(patch, shotId = activeShot()?.id) {
+  if (!shotId) return;
   try {
-    const updated = await api.patchShot(state.project.id, shot.id, patch);
-    state.project.shots[state.activeIndex] = updated;
+    const updated = await api.patchShot(state.project.id, shotId, patch);
+    const index = state.project.shots.findIndex((s) => s.id === shotId);
+    if (index !== -1) state.project.shots[index] = updated;
     const counter = root.querySelector('#reviewCount');
     if (counter) counter.textContent = String(state.project.shots.filter((s) => s.reviewed).length);
     renderStrip();
@@ -352,6 +412,12 @@ function seekTo(time) {
 
 function selectShot(index) {
   if (index < 0 || index >= state.project.shots.length) return;
+  // 必须在 activeIndex 变化、面板重绘之前把没存的文字冲出去
+  flushSave();
+  // 焦点若还留在备注框里，切到下一个镜头后按键会继续往文本框里打，
+  // 而不是触发标注快捷键。主动移开，让键盘操作接得上。
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) active.blur();
   state.activeIndex = index;
   const shot = activeShot();
   // 往里挪 50ms，避免正好落在切点上取到上一个镜头的末帧
@@ -367,6 +433,7 @@ function selectShot(index) {
  * 场景检测抓不到「同一个人、同一背景、只换机位」的切换，这是唯一的补救手段。
  */
 async function splitAtPlayhead() {
+  flushSave();
   const shot = activeShot();
   if (!shot || !state.video) return;
   const time = state.video.currentTime;
@@ -394,6 +461,7 @@ async function splitAtPlayhead() {
  * 只能对选中的段落单独调。
  */
 async function autoSplitCurrent() {
+  flushSave();
   const shot = activeShot();
   if (!shot) return;
   const input = prompt(
@@ -420,6 +488,7 @@ async function autoSplitCurrent() {
 }
 
 async function mergeIntoPrevious() {
+  flushSave();
   const shot = activeShot();
   if (!shot) return;
   if (state.activeIndex === 0) return toast('第一个镜头前面没有镜头可以合并');
@@ -476,6 +545,23 @@ async function doAutoAnnotate() {
 
 /* ------------------------------------------------------- 键盘 */
 
+/**
+ * 从事件里取出「用户按的是哪个物理键」。
+ *
+ * 不能只看 e.key：中文输入法开着的时候，字母键会被输入法截走当拼音，
+ * e.key 变成 'Process' 或直接是候选汉字，页面收不到原本的字母——
+ * 对一个中文用户的键盘驱动工具来说这是致命的。
+ * e.code 给的是物理键位（KeyZ / Digit6），不受输入法和键盘布局影响。
+ */
+function physicalKey(e) {
+  const code = e.code ?? '';
+  if (code.startsWith('Key')) return code.slice(3).toLowerCase();
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code === 'Semicolon') return ';';
+  // 没有 code 的老浏览器回落到 e.key
+  return typeof e.key === 'string' && e.key.length === 1 ? e.key.toLowerCase() : '';
+}
+
 document.addEventListener('keydown', (e) => {
   if (state.view !== 'workbench') return;
   const tag = e.target.tagName;
@@ -484,8 +570,13 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') e.target.blur();
     return;
   }
+  // 走到这里说明焦点不在输入框，快捷键是生效的
+  setTypingIndicator(false);
 
-  if (e.key === ' ') {
+  // 正在用输入法组字时一律放行，否则会把半成品拼音当成快捷键
+  if (e.isComposing) return;
+
+  if (e.key === ' ' || e.code === 'Space') {
     e.preventDefault();
     state.video?.paused ? state.video.play() : state.video?.pause();
     return;
@@ -494,11 +585,15 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowLeft') { e.preventDefault(); return selectShot(state.activeIndex - 1); }
   if (e.key === 'Enter') {
     e.preventDefault();
-    patchShot({ reviewed: true });
+    patchShot({ reviewed: true }, activeShot()?.id);
     return selectShot(state.activeIndex + 1);
   }
 
-  const key = e.key.toLowerCase();
+  // Ctrl / Cmd 组合是浏览器自己的（复制、刷新等），不抢
+  if (e.ctrlKey || e.metaKey) return;
+
+  const key = physicalKey(e);
+  if (!key) return;
 
   // 结构编辑优先于标注：S/M 必须在词汇表查找之前处理，
   // 否则 S 会被构图的「三分法」抢走
