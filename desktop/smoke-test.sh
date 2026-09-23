@@ -56,6 +56,12 @@ echo "   切分完成"
 echo "== 5. yt-dlp"
 "$RES/bin/yt-dlp" --version || fail "yt-dlp 不能运行"
 
+echo "== 6. 强制按 Apple 芯片原生运行（不借 Rosetta）"
+for b in ffmpeg ffprobe yt-dlp; do
+  arch -arm64 "$RES/bin/$b" -version >/dev/null 2>&1 || arch -arm64 "$RES/bin/$b" --version >/dev/null 2>&1 || fail "$b 不能原生运行"
+  echo "   ✓ $b"
+done
+
 kill $SERVER_PID 2>/dev/null || true
 trap - EXIT
 cp "$WORK/server.log" "$OUT/server-smoke.log"

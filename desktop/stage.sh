@@ -44,15 +44,27 @@ rm -rf "$STAGE/node_modules/.remotion"
 ls "$STAGE/chrome" | sed 's/^/   /'
 
 echo "== ffmpeg / ffprobe（Apple 芯片版）"
+# ffprobe-static 的 macOS 版其实是 Intel 的，装了 Rosetta 才能跑；换成真正的 arm64 版
 TMP="$(mktemp -d)"
-(cd "$TMP" && npm init -y >/dev/null && npm install --no-audit --no-fund ffmpeg-static@5 ffprobe-static@3 >/dev/null)
+(cd "$TMP" && npm init -y >/dev/null && npm install --no-audit --no-fund ffmpeg-static@5 @ffprobe-installer/darwin-arm64@5 >/dev/null)
 cp "$(cd "$TMP" && node -p "require('ffmpeg-static')")" "$STAGE/bin/ffmpeg"
-cp "$(cd "$TMP" && node -p "require('ffprobe-static').path")" "$STAGE/bin/ffprobe"
+cp "$TMP/node_modules/@ffprobe-installer/darwin-arm64/ffprobe" "$STAGE/bin/ffprobe"
 rm -rf "$TMP"
 
 echo "== yt-dlp（下载抖音、B 站链接用）"
 curl -L --fail --retry 3 -o "$STAGE/bin/yt-dlp" https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos
 chmod +x "$STAGE/bin/"*
 
-file "$STAGE/bin/"* | sed 's/^/   /'
+echo "== 检查：自带程序必须都能在 Apple 芯片上原生运行（用户的 Mac 不一定装了 Rosetta）"
+check_arm64() {
+  if lipo -archs "$1" 2>/dev/null | grep -qw arm64; then
+    echo "   ✓ $(basename "$1")：$(lipo -archs "$1")"
+  else
+    echo "   ✗ $1 不是 Apple 芯片版（$(lipo -archs "$1" 2>/dev/null || echo 未知)）"
+    exit 1
+  fi
+}
+for f in "$STAGE/bin/"* "$STAGE/chrome/chrome-headless-shell" "$STAGE"/node_modules/@remotion/compositor-darwin-arm64/remotion; do
+  check_arm64 "$f"
+done
 du -sh "$STAGE" | sed 's/^/   总大小 /'
