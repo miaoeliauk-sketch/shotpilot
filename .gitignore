@@ -7,3 +7,5 @@ projects/
 *.mp4
 *.mov
 *.wav
+downloads/
+replica-out/

@@ -1,9 +1,12 @@
+import { spawn } from 'node:child_process';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { extname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyzeVideo, resplit } from '../analyze/pipeline.js';
+import { downloadVideo, extractUrl } from '../analyze/fetch.js';
+import { buildReplicaPackage } from '../export/replica.js';
 import { detectCuts, mergeWithPrevious, splitShot, splitShotByCuts } from '../analyze/shots.js';
 import { generateThumbnailFor, generateThumbnails } from '../analyze/thumbnails.js';
 import { autoAnnotate, visionConfigFromEnv } from '../analyze/vision.js';
@@ -30,6 +33,16 @@ const MIME: Record<string, string> = {
   '.webm': 'video/webm',
   '.mkv': 'video/x-matroska',
 };
+
+/** 在访达里打开一个目录。只在 Mac 上做；其他系统静默跳过。 */
+function revealInFinder(dir: string): void {
+  if (process.platform !== 'darwin') return;
+  try {
+    spawn('open', [dir], { stdio: 'ignore', detached: true }).unref();
+  } catch {
+    // 打不开访达不影响导出本身
+  }
+}
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body);
@@ -167,9 +180,13 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
   // POST /api/projects  —— 新建并分析
   if (parts.length === 2 && req.method === 'POST') {
     const body = (await readBody(req)) as Record<string, unknown>;
-    const videoPath = typeof body.path === 'string' ? body.path : '';
-    if (!videoPath) { sendError(res, 400, '缺少 path'); return true; }
-    if (!existsSync(videoPath)) { sendError(res, 400, `找不到视频：${videoPath}`); return true; }
+    const input = typeof body.path === 'string' ? body.path.trim() : '';
+    if (!input) { sendError(res, 400, '请粘贴视频链接，或填视频文件的完整路径'); return true; }
+    // 输入里有链接（哪怕是一整段抖音分享文案）就走下载；否则当本地路径
+    const url = extractUrl(input);
+    // 本地路径常被拖进来时带上引号或转义空格，顺手清掉
+    const localPath = input.replace(/^['"]|['"]$/g, '').replace(/\\ /g, ' ');
+    if (!url && !existsSync(localPath)) { sendError(res, 400, `找不到视频：${localPath}`); return true; }
 
     // 分析很慢，用 SSE 把进度推给前端，而不是让用户对着转圈猜
     res.writeHead(200, {
@@ -181,8 +198,17 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
     try {
+      let videoPath = localPath;
+      let title = typeof body.title === 'string' ? body.title : undefined;
+      if (url) {
+        emit('progress', { stage: 'download', detail: url });
+        const got = await downloadVideo(url, (msg) => emit('progress', { stage: 'download', detail: msg }));
+        videoPath = got.path;
+        title = title ?? (got.title || undefined);
+        emit('progress', { stage: 'download', detail: `已下载：${got.path}` });
+      }
       const project = await analyzeVideo(videoPath, {
-        title: typeof body.title === 'string' ? body.title : undefined,
+        title,
         threshold: typeof body.threshold === 'number' ? body.threshold : undefined,
         minShotDuration: typeof body.minShotDuration === 'number' ? body.minShotDuration : undefined,
       }, (stage, detail) => emit('progress', { stage, detail }));
@@ -307,6 +333,39 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     } catch (err) {
       sendError(res, 400, err instanceof Error ? err.message : '合并失败');
     }
+    return true;
+  }
+
+  // POST /api/projects/:id/replica —— 在网页里导出复刻包，不用去终端
+  if (parts[3] === 'replica' && req.method === 'POST') {
+    const body = (await readBody(req)) as Record<string, unknown>;
+    const targets = typeof body.shotId === 'string'
+      ? project.shots.filter((s) => s.id === body.shotId)
+      : project.shots.filter((s) => s.roll === 'b-roll' || s.roll === 'overlay' || s.roll === 'title');
+    if (targets.length === 0) {
+      sendError(res, 400, typeof body.shotId === 'string'
+        ? `镜头不存在：${body.shotId}`
+        : '还没有标为 B-roll / 叠加层 / 字卡的镜头。先按 X 或 V 标出要复刻的镜头。');
+      return true;
+    }
+    const outRoot = resolve(process.env.SHOTPILOT_REPLICA_OUT ?? join(process.cwd(), 'replica-out'));
+    res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', connection: 'keep-alive' });
+    const emit = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    try {
+      const dirs: string[] = [];
+      for (const [i, shot] of targets.entries()) {
+        emit('progress', { done: i, total: targets.length, shotId: shot.id });
+        const r = await buildReplicaPackage(project, shot, outRoot);
+        dirs.push(r.dir);
+      }
+      // 在访达里直接打开：一个镜头就打开它的包，多个就打开外层目录
+      const reveal = dirs.length === 1 ? (dirs[0] as string) : outRoot;
+      revealInFinder(reveal);
+      emit('done', { dirs, revealed: reveal });
+    } catch (err) {
+      emit('failed', { message: err instanceof Error ? err.message : String(err) });
+    }
+    res.end();
     return true;
   }
 

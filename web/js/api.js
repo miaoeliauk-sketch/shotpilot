@@ -59,7 +59,10 @@ export async function streamPost(url, body, handlers) {
   });
   if (!res.ok || !res.body) {
     const text = await res.text();
-    throw new Error(text || `请求失败：${res.status}`);
+    // 服务端出错时返回 {"error": "..."}，只把里面那句话给用户看
+    let message = text;
+    try { message = JSON.parse(text).error ?? text; } catch { /* 不是 JSON，原样显示 */ }
+    throw new Error(message || `请求失败：${res.status}`);
   }
 
   const reader = res.body.getReader();

@@ -65,7 +65,8 @@ function renderHome() {
 
       <div class="new-box">
         <h3 style="margin:0 0 8px">新建拉片</h3>
-        <input id="path" placeholder="视频的绝对路径，例如 /Users/you/Downloads/ref.mp4">
+        <input id="path" placeholder="粘贴抖音 / B 站链接（整段分享文案也行），或本地视频的路径">
+        <div class="hint">链接会自动下载。本地视频：在访达里选中文件，按 Option + Command + C 拷贝路径，再粘贴到这里</div>
         <div class="row">
           <label>切分灵敏度</label>
           <input id="threshold" type="number" step="0.05" min="0.05" max="0.95" value="0.3" style="width:90px">
@@ -103,7 +104,7 @@ function renderHome() {
 
 async function startAnalyze() {
   const path = root.querySelector('#path').value.trim();
-  if (!path) return toast('请填写视频路径');
+  if (!path) return toast('请粘贴视频链接，或拖入视频文件');
 
   const btn = root.querySelector('#go');
   const logEl = root.querySelector('#log');
@@ -159,6 +160,7 @@ function renderWorkbench() {
           <span class="title">${esc(p.title)}</span>
           <span class="meta">${p.shots.length} 镜头 · 已审 <b id="reviewCount">${p.shots.filter((s) => s.reviewed).length}</b></span>
           <span class="grow"></span>
+          <button id="btnReplicaAll" title="把标为 B-roll / 叠加层 / 字卡的镜头都导出成复刻包">导出复刻包</button>
           <button id="btnResplit">重新切分</button>
           <button id="btnAi" ${state.visionConfigured ? '' : 'disabled title="未配置 SHOTPILOT_VISION_API_KEY"'}>AI 初判</button>
           <button id="btnMd">导出笔记</button>
@@ -185,6 +187,7 @@ function renderWorkbench() {
   root.querySelector('#btnMd').onclick = () => window.open(`/api/projects/${p.id}/export/md`);
   root.querySelector('#btnJson').onclick = () => window.open(`/api/projects/${p.id}/export/json`);
   root.querySelector('#btnResplit').onclick = doResplit;
+  root.querySelector('#btnReplicaAll').onclick = () => exportReplica(null);
   root.querySelector('#btnAi').onclick = doAutoAnnotate;
 
   renderStrip();
@@ -240,6 +243,7 @@ function renderSide() {
     <div class="group"><h3>特效（逗号分隔）</h3><input id="effects" value="${esc(shot.effects.join('，'))}"></div>
     <div class="group"><h3>B-roll 内容</h3><input id="brollContent" value="${esc(shot.brollContent ?? '')}" placeholder="复刻时这里要放什么画面"></div>
     <div class="group"><button id="btnAutoSplit" style="width:100%">在此镜头内细切（降低阈值重测）</button></div>
+    <div class="group"><button id="btnReplicaOne" style="width:100%">导出这个镜头的复刻包</button></div>
     <div class="group"><button class="primary" id="btnReview" style="width:100%">${shot.reviewed ? '✓ 已审（点击取消）' : '标记已审并下一个 (Enter)'}</button></div>`;
 
   side.innerHTML = html;
@@ -252,6 +256,7 @@ function renderSide() {
     el.oninput = () => queueSave();
   }
   side.querySelector('#btnAutoSplit').onclick = autoSplitCurrent;
+  side.querySelector('#btnReplicaOne').onclick = () => exportReplica(activeShot()?.id ?? null);
   side.querySelector('#btnReview').onclick = () => {
     const s = activeShot();
     patchShot({ reviewed: !s.reviewed });
@@ -449,6 +454,30 @@ async function mergeIntoPrevious() {
     toast(`已合并，现在 ${r.shots.length} 个镜头`);
   } catch (err) {
     toast(`合并失败：${err.message}`);
+  }
+}
+
+/* ------------------------------------------------------- 复刻包 */
+
+/**
+ * 导出复刻包。shotId 为 null 时导出所有 B-roll / 叠加层 / 字卡。
+ * 导出完服务端会在访达里打开文件夹，把里面的 clip.mp4 发出去即可。
+ */
+async function exportReplica(shotId) {
+  flushSave();
+  const btns = [root.querySelector('#btnReplicaAll'), root.querySelector('#btnReplicaOne')].filter(Boolean);
+  btns.forEach((b) => { b.disabled = true; });
+  toast(shotId ? `正在导出 ${shotId} 的复刻包…` : '正在导出复刻包…');
+  try {
+    await streamPost(`/api/projects/${state.project.id}/replica`, shotId ? { shotId } : {}, {
+      progress: (d) => toast(`导出中 ${d.done + 1}/${d.total}：${d.shotId}`),
+      done: (d) => toast(`已导出 ${d.dirs.length} 个复刻包，已在访达中打开`),
+      failed: (d) => toast(`导出失败：${d.message}`),
+    });
+  } catch (err) {
+    toast(`导出失败：${err.message}`);
+  } finally {
+    btns.forEach((b) => { b.disabled = false; });
   }
 }
 
