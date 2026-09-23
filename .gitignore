@@ -12,3 +12,5 @@ replica-out/
 works/
 assets/
 renders/
+# 构建产物
+web/js/studio.js

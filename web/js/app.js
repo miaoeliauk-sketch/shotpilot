@@ -60,8 +60,12 @@ function toast(message) {
 function renderHome() {
   root.innerHTML = `
     <div class="home">
+      <div class="tabs">
+        <button class="tab active">拉片</button>
+        <button class="tab" id="goStudio">用模板做视频</button>
+      </div>
       <h1>ShotPilot 拉片工作台</h1>
-      <p class="sub">导入视频 → 自动切分镜 → 逐镜标注景别/运镜/光线 → 导出笔记与 hypit 素材</p>
+      <p class="sub">导入视频 → 自动切分镜 → 逐镜标注 → 导出复刻包。复刻好的效果在「用模板做视频」里换上你的内容</p>
 
       <div class="new-box">
         <h3 style="margin:0 0 8px">新建拉片</h3>
@@ -100,6 +104,31 @@ function renderHome() {
   }
 
   root.querySelector('#go').onclick = startAnalyze;
+  root.querySelector('#goStudio').onclick = () => openStudio(null);
+}
+
+/* ------------------------------------------------------- 用模板做视频 */
+
+// 模板工作室是单独打包的 React 界面（web/js/studio.js），切过去时才加载
+let unmountStudio = null;
+
+async function openStudio(workId) {
+  state.view = 'studio';
+  root.innerHTML = '<div id="studioRoot" class="studio-root"><div class="boot">正在加载模板…</div></div>';
+  try {
+    const mod = await import('/js/studio.js');
+    unmountStudio = mod.mountStudio(root.querySelector('#studioRoot'), {
+      workId,
+      onExit: () => {
+        unmountStudio?.();
+        unmountStudio = null;
+        history.replaceState(null, '', '/');
+        boot();
+      },
+    });
+  } catch (err) {
+    root.innerHTML = `<div class="home"><h1>模板加载失败</h1><p class="warn">${esc(err.message)}</p></div>`;
+  }
 }
 
 async function startAnalyze() {
@@ -602,7 +631,9 @@ async function boot() {
     return;
   }
 
-  const id = new URLSearchParams(location.search).get('id');
+  const query = new URLSearchParams(location.search);
+  if (query.get('studio')) return openStudio(query.get('work'));
+  const id = query.get('id');
   if (id) {
     try { return await openProject(id); } catch { history.replaceState(null, '', '/'); }
   }

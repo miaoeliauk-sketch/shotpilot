@@ -37,6 +37,8 @@ export type TemplateMeta = {
   width: number;
   height: number;
   fps: number;
+  /** 列表里预览停在哪一帧（挑一帧最能看出这个模板是什么的） */
+  posterFrame: number;
   form: Section[];
   defaultParams: Params;
 };

@@ -8,13 +8,14 @@
     "node": ">=22.15"
   },
   "scripts": {
-    "dev": "tsx src/server/index.ts",
+    "dev": "tsx scripts/build-ui.ts && tsx src/server/index.ts",
     "analyze": "tsx src/cli.ts",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.ui.json",
     "replica": "tsx src/replica-cli.ts",
     "compare": "tsx src/compare-cli.ts",
-    "build:templates": "tsx scripts/build-templates.ts"
+    "build:templates": "tsx scripts/build-templates.ts",
+    "build:ui": "tsx scripts/build-ui.ts"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.527",

@@ -60,6 +60,7 @@ export const meta: TemplateMeta = {
   width: 1280,
   height: 720,
   fps: FPS,
+  posterFrame: 40,
   form,
   defaultParams: defaultParams as unknown as Record<string, unknown>,
 };
