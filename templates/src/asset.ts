@@ -1,4 +1,4 @@
-import { staticFile } from 'remotion';
+import { getRemotionEnvironment, staticFile } from 'remotion';
 
 /**
  * 模板里的图片地址。
@@ -10,4 +10,12 @@ import { staticFile } from 'remotion';
 export function assetUrl(src: string): string {
   if (src.startsWith('/') || /^[a-z][a-z0-9+.-]*:/i.test(src)) return src;
   return staticFile(src);
+}
+
+/**
+ * 模板自带、不让用户换的素材（字体、纸张纹理这些），放在 templates/public/ 下。
+ * 预览时从工作台的 /template-assets/ 取；导出时从打包好的模板里取。
+ */
+export function bundledUrl(path: string): string {
+  return getRemotionEnvironment().isPlayer ? `/template-assets/${path}` : staticFile(path);
 }

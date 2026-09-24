@@ -49,8 +49,13 @@ describe('上传的图片', () => {
     expect(await saveAsset(Buffer.from('x'), 'a.jpeg')).toMatch(/\.jpg$/);
   });
 
-  it('不是图片就拒绝', async () => {
-    await expect(saveAsset(Buffer.from('x'), 'a.mp4')).rejects.toThrow('只支持');
-    expect(existsSync(join(dir, '素材', 'a.mp4'))).toBe(false);
+  it('不是图片也不是视频就拒绝', async () => {
+    await expect(saveAsset(Buffer.from('x'), 'a.pdf')).rejects.toThrow('只支持');
+    expect(readdirSync(join(dir, '素材')).some((f) => f.endsWith('.pdf'))).toBe(false);
+  });
+
+  it('视频打不开就拒绝，也不留下文件', async () => {
+    await expect(saveAsset(Buffer.from('not-a-video'), 'a.mp4')).rejects.toThrow('打不开');
+    expect(readdirSync(join(dir, '素材')).some((f) => f.endsWith('.mp4'))).toBe(false);
   });
 });

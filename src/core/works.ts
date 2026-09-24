@@ -1,8 +1,9 @@
-import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, unlink, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
 import { extname, join } from 'node:path';
 import { dataDir } from './paths.js';
+import { probeMedia } from '../analyze/probe.js';
 
 /**
  * 「我的作品」：用某个模板做的一条视频的参数。
@@ -67,21 +68,34 @@ export async function deleteWork(id: string): Promise<void> {
   await rm(workPath(id), { force: true });
 }
 
-// ── 素材（用户上传的图片）──────────────────────────────────────────────
+// ── 素材（用户上传的图片、视频）────────────────────────────────────────
 
 const IMAGE_EXTS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif']);
+const VIDEO_EXTS = new Set(['.mp4', '.mov', '.m4v', '.webm']);
 
 /**
- * 保存一张上传的图片，返回站内地址。
- * 按内容取名：同一张图传两次只存一份，作品里的地址也不会因为改了原文件名而失效。
+ * 保存一张上传的图片或一段视频，返回站内地址。
+ * 按内容取名：同一个文件传两次只存一份，作品里的地址也不会因为改了原文件名而失效。
+ *
+ * 视频的地址后面带上时长（#dur=秒）：模板要按它循环播放，
+ * 而预览和导出时都拿不到文件本身，只有这个地址。# 后面的部分不会发给服务器，不影响取文件。
  */
 export async function saveAsset(data: Buffer, originalName: string): Promise<string> {
   const ext = extname(originalName).toLowerCase();
-  if (!IMAGE_EXTS.has(ext)) throw new Error('只支持 JPG、PNG、WebP、GIF 图片');
-  const name = `${createHash('sha1').update(data).digest('hex').slice(0, 16)}${ext === '.jpeg' ? '.jpg' : ext}`;
+  const video = VIDEO_EXTS.has(ext);
+  if (!IMAGE_EXTS.has(ext) && !video) throw new Error('只支持 JPG、PNG、WebP、GIF 图片，或 MP4、MOV、WebM 视频');
+  const name = `${createHash('sha1').update(data).digest('hex').slice(0, 16)}${ext === '.jpeg' ? '.jpg' : ext === '.m4v' ? '.mp4' : ext}`;
   const dir = dataDir('assets');
   await mkdir(dir, { recursive: true });
   const target = join(dir, name);
-  if (!existsSync(target)) await writeFile(target, data);
-  return `/files/assets/${name}`;
+  const fresh = !existsSync(target);
+  if (fresh) await writeFile(target, data);
+  if (!video) return `/files/assets/${name}`;
+  try {
+    const media = await probeMedia(target);
+    return `/files/assets/${name}#dur=${Math.round(media.duration * 1000) / 1000}`;
+  } catch {
+    if (fresh) await unlink(target).catch(() => undefined);
+    throw new Error('这个视频打不开，换一个 MP4 或 MOV 试试');
+  }
 }

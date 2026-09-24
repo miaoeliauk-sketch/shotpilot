@@ -1,8 +1,8 @@
 import React, { useLayoutEffect, useMemo, useState } from 'react';
-import { AbsoluteFill, Easing, Img, continueRender, delayRender, interpolate, useCurrentFrame } from 'remotion';
-import { assetUrl } from '../asset';
+import { AbsoluteFill, Easing, continueRender, delayRender, interpolate, useCurrentFrame } from 'remotion';
+import { Media } from '../media';
 import { inkMaskUrl } from './ink';
-import { layoutBody, measure, type BodyChar, type BodyLayout } from './layout';
+import { layoutBody, measure, type BodyChar, type BodyLayout } from '../text-layout';
 
 /**
  * 复刻：金色大标题 → 墨迹转场 → 新闻稿划重点 → 推近特写（150 帧，1280×720 @30fps）
@@ -17,8 +17,8 @@ import { layoutBody, measure, type BodyChar, type BodyLayout } from './layout';
  *
  * 只复刻画面。原片底部那行口播字幕是后期加的，不在模板里；比对时用 --mask 遮掉。
  *
- * 标题段的背景是位图（手、卡片、纸片、书架），换成用户自己的图；
- * 卡片和纸片在原片里各自有动作，一张静态图做不出来，这是标题段和原片差异最大的地方。
+ * 标题段的背景是位图（手、卡片、纸片、书架），换成用户自己的图或视频；
+ * 卡片和纸片在原片里各自有动作，一张静态图做不出来（换成视频就可以），这是标题段和原片差异最大的地方。
  *
  * ── 复刻记录（SSIM 按段，遮掉底部字幕；开场背景用原片第 56 帧刮掉标题）──────────
  *   第一版     标题 0.806 · 转场 0.573 · 新闻稿 0.614 · 特写 0.596
@@ -228,15 +228,14 @@ const TitleScene: React.FC<NewsHeadlineProps & { frame: number; mask: string | n
     <AbsoluteFill style={{ ...maskStyle }}>
       <AbsoluteFill style={{ transformOrigin: '640px 0px', transform: `scale(${S})` }}>
         {/* 背景：虚化时四周往外多铺一圈，免得边缘被模糊成黑边 */}
-        <Img
-          src={assetUrl(p.image)}
+        <Media
+          src={p.image}
           style={{
             position: 'absolute',
             left: -margin,
             top: -margin,
             width: 1280 + margin * 2,
             height: 720 + margin * 2,
-            objectFit: 'cover',
             filter: sigma > 0.05 ? `blur(${sigma.toFixed(2)}px)` : undefined,
           }}
         />

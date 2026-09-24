@@ -120,7 +120,7 @@ const form: Section[] = [
   {
     title: '开场大标题',
     fields: [
-      { kind: 'image', key: 'image', label: '背景图', hint: '横版图片，1280×720 或更大。开场会放大 2.4 倍再慢慢拉远，图越清楚越好' },
+      { kind: 'media', key: 'image', label: '背景', hint: '横版图片或视频，1280×720 或更大。开场会放大 2.4 倍再慢慢拉远，越清楚越好' },
       { kind: 'text', key: 'title', label: '大标题', hint: '8–10 个字最好看，英文会自动拉高压窄' },
       { kind: 'text', key: 'subtitle', label: '标题下的小字', placeholder: '比如英文标题（留空不要）' },
       { kind: 'color', key: 'titleColor', label: '标题颜色', hint: '会自动做成上亮下暗的渐变' },

@@ -18,6 +18,8 @@ type FieldBase = {
 
 export type Field =
   | (FieldBase & { kind: 'image' })
+  /** 图片或视频都行（视频静音、循环播放），比如会动的背景 */
+  | (FieldBase & { kind: 'media' })
   | (FieldBase & { kind: 'text'; placeholder?: string })
   | (FieldBase & { kind: 'number'; min: number; max: number; step: number; unit?: string })
   | (FieldBase & { kind: 'color' })

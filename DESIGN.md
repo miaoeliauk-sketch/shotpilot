@@ -61,6 +61,11 @@
 转场遮罩这类每帧都变的图用 canvas 现画、当 CSS mask 用；CSS 里的图是异步解码的，
 导出时得先 `delayRender` 等它解码完，不然会截到没套上遮罩的帧。
 
+模板的图片槽位可以是视频（表单里 `kind: 'media'`，组件里用 `templates/src/media.tsx` 的 `Media`）：
+上传视频时服务端用 ffprobe 量出时长，写在地址后面（`…mp4#dur=4.93`），模板按它循环播放、一律静音。
+原片里用的窄体数字、英文字体 Mac 上没有，开源的（SIL OFL）直接放在 `templates/public/fonts/`，
+`templates/src/fonts.ts` 加载好之前用 `delayRender` 挡住导出，不会截到后备字体。
+
 ### 6. Mac 软件：程序只读，数据在「文稿」
 
 软件里自带 ffmpeg、yt-dlp、渲染用的浏览器和打包好的模板，全部通过环境变量交给工作台服务，

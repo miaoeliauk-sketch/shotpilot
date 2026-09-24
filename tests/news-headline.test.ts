@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { defaultParams, meta, toProps, type NewsParams } from '../templates/src/news-headline/params';
 import { glyphStart, underlinePath } from '../templates/src/news-headline/NewsHeadline';
-import { layoutBody, type BodyBox } from '../templates/src/news-headline/layout';
+import { layoutBody, type BodyBox } from '../templates/src/text-layout';
 import { inkProgress } from '../templates/src/news-headline/ink';
 
 const raw = defaultParams as unknown as Record<string, unknown>;

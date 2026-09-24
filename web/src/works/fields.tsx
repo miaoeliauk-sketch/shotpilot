@@ -11,14 +11,23 @@ import { PopupButton } from '../ui/menu';
 
 type Values = Record<string, unknown>;
 
-function ImageField({ label, value, onChange, disabled }: { label: string; value: string; onChange: (v: string) => void; disabled?: boolean }) {
+/** 地址是不是视频（上传的视频地址后面带 #dur=时长） */
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|m4v|webm)(#|\?|$)/i.test(url);
+}
+
+function ImageField({ label, value, onChange, disabled, allowVideo = false }: { label: string; value: string; onChange: (v: string) => void; disabled?: boolean; allowVideo?: boolean }) {
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [over, setOver] = useState(false);
   const pick = async (file: File | undefined) => {
     if (!file) return;
-    if (!file.type.startsWith('image/')) { setError('只能用图片（png、jpg、webp、gif）'); return; }
+    const video = file.type.startsWith('video/');
+    if (!file.type.startsWith('image/') && !(allowVideo && video)) {
+      setError(allowVideo ? '只能用图片（png、jpg、webp、gif）或视频（mp4、mov）' : '只能用图片（png、jpg、webp、gif）');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -30,6 +39,7 @@ function ImageField({ label, value, onChange, disabled }: { label: string; value
       if (input.current) input.current.value = '';
     }
   };
+  const accept = `image/png,image/jpeg,image/webp,image/gif${allowVideo ? ',video/mp4,video/quicktime,video/webm' : ''}`;
   return (
     <div
       className={`image-well${over ? ' over' : ''}`}
@@ -37,13 +47,17 @@ function ImageField({ label, value, onChange, disabled }: { label: string; value
       onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); setOver(false); void pick(e.dataTransfer.files[0]); }}
     >
-      {value ? <img src={value} alt={label} /> : <span className="image-empty" />}
+      {!value ? <span className="image-empty" />
+        : isVideoUrl(value) ? <video src={value.split('#')[0]} muted preload="metadata" aria-label={label} />
+          : <img src={value} alt={label} />}
       <div className="image-well-side">
-        <Button disabled={busy || disabled} onClick={() => input.current?.click()}>{busy ? '正在放进来…' : '换一张图…'}</Button>
-        <span className="form-hint">也可以把图片拖到这里</span>
+        <Button disabled={busy || disabled} onClick={() => input.current?.click()}>
+          {busy ? '正在放进来…' : allowVideo ? '换图片或视频…' : '换一张图…'}
+        </Button>
+        <span className="form-hint">{allowVideo ? '视频会静音、循环播放。也可以直接拖进来' : '也可以把图片拖到这里'}</span>
         {error && <span className="form-error">{error}</span>}
       </div>
-      <input ref={input} type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden onChange={(e) => void pick(e.target.files?.[0])} />
+      <input ref={input} type="file" accept={accept} hidden onChange={(e) => void pick(e.target.files?.[0])} />
     </div>
   );
 }
@@ -66,7 +80,12 @@ function FieldControl({ field, values, onChange }: { field: Exclude<Field, { kin
         </div>
       );
     case 'image':
-      return <FormRow label={field.label} hint={field.hint} disabled={disabled}><ImageField label={field.label} value={String(value ?? '')} onChange={set} disabled={disabled} /></FormRow>;
+    case 'media':
+      return (
+        <FormRow label={field.label} hint={field.hint} disabled={disabled}>
+          <ImageField label={field.label} value={String(value ?? '')} onChange={set} disabled={disabled} allowVideo={field.kind === 'media'} />
+        </FormRow>
+      );
     case 'text':
       return (
         <FormRow label={field.label} htmlFor={id} hint={field.hint} disabled={disabled}>

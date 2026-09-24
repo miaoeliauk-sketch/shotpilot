@@ -214,11 +214,11 @@ async function handleTemplateApi(req: IncomingMessage, res: ServerResponse, part
     return false;
   }
 
-  // ── 上传图片 ──  POST /api/assets，请求头 x-filename 带原文件名（URL 编码）
+  // ── 上传图片、视频 ──  POST /api/assets，请求头 x-filename 带原文件名（URL 编码）
   if (parts[1] === 'assets' && req.method === 'POST') {
     try {
       const name = decodeURIComponent(String(req.headers['x-filename'] ?? 'image.png'));
-      const data = await readRawBody(req, 60 * 1024 * 1024);
+      const data = await readRawBody(req, 500 * 1024 * 1024);
       if (data.length === 0) { sendError(res, 400, '没有收到图片'); return true; }
       sendJson(res, 200, { url: await saveAsset(data, name) });
     } catch (err) {
