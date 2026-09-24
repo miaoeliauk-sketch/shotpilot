@@ -9,7 +9,7 @@
  *
  * 用户数据放在「文稿/ShotPilot」，程序本身只读，更新软件不会碰到用户的作品。
  */
-import { app, BrowserWindow, dialog, nativeTheme, screen, shell, utilityProcess } from 'electron';
+import { app, BrowserWindow, dialog, Menu, nativeTheme, screen, shell, utilityProcess } from 'electron';
 import { createWriteStream, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
@@ -152,6 +152,59 @@ function createWindow() {
   void mainWindow.loadURL(`http://127.0.0.1:${serverPort}/`);
 }
 
+/** 屏幕顶上的菜单栏，用中文。「编辑」菜单不能省：没有它，输入框里 ⌘C / ⌘V 在 Mac 上不起作用 */
+function setMenu() {
+  const sep = { type: 'separator' };
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    {
+      label: app.name,
+      submenu: [
+        { role: 'about', label: '关于 ShotPilot' },
+        sep,
+        { role: 'hide', label: '隐藏 ShotPilot' },
+        { role: 'hideOthers', label: '隐藏其他' },
+        { role: 'unhide', label: '全部显示' },
+        sep,
+        { role: 'quit', label: '退出 ShotPilot' },
+      ],
+    },
+    {
+      label: '编辑',
+      submenu: [
+        { role: 'undo', label: '撤销' },
+        { role: 'redo', label: '重做' },
+        sep,
+        { role: 'cut', label: '剪切' },
+        { role: 'copy', label: '拷贝' },
+        { role: 'paste', label: '粘贴' },
+        { role: 'selectAll', label: '全选' },
+      ],
+    },
+    {
+      label: '显示',
+      submenu: [
+        { role: 'reload', label: '重新载入' },
+        sep,
+        { role: 'resetZoom', label: '实际大小' },
+        { role: 'zoomIn', label: '放大' },
+        { role: 'zoomOut', label: '缩小' },
+        sep,
+        { role: 'togglefullscreen', label: '进入全屏幕' },
+      ],
+    },
+    {
+      label: '窗口',
+      role: 'windowMenu',
+      submenu: [
+        { role: 'minimize', label: '最小化' },
+        { role: 'zoom', label: '缩放' },
+        sep,
+        { role: 'front', label: '前置全部窗口' },
+      ],
+    },
+  ]));
+}
+
 function selfCheck() {
   const missing = ['ffmpeg', 'ffprobe', 'yt-dlp'].filter((n) => !existsSync(join(BIN, n)));
   if (!findChrome()) missing.push('chrome-headless-shell');
@@ -182,6 +235,7 @@ if (process.argv.includes('--self-check')) {
       app.quit();
       return;
     }
+    setMenu();
     createWindow();
     app.on('activate', () => {
       if (!mainWindow) createWindow();
