@@ -9,7 +9,7 @@
  *
  * 用户数据放在「文稿/ShotPilot」，程序本身只读，更新软件不会碰到用户的作品。
  */
-import { app, BrowserWindow, dialog, shell, utilityProcess } from 'electron';
+import { app, BrowserWindow, dialog, nativeTheme, screen, shell, utilityProcess } from 'electron';
 import { createWriteStream, existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { dirname, join } from 'node:path';
@@ -120,11 +120,17 @@ async function startServer() {
 }
 
 function createWindow() {
+  // 界面是深色的（和 Final Cut Pro 一样），系统是浅色模式时也用深色的毛玻璃和系统控件，不然左边一栏会发灰
+  nativeTheme.themeSource = 'dark';
+  // 笔记本屏幕放不下 1440×900 时按屏幕可用区域缩小，别让窗口伸出屏幕外
+  const work = screen.getPrimaryDisplay().workAreaSize;
+  const width = Math.min(1440, work.width);
+  const height = Math.min(900, work.height);
   mainWindow = new BrowserWindow({
-    width: 1440,
-    height: 900,
-    minWidth: 1100,
-    minHeight: 720,
+    width,
+    height,
+    minWidth: Math.min(1100, width),
+    minHeight: Math.min(680, height),
     title: 'ShotPilot',
     // 和 Mac 自带软件一样：没有单独的标题栏，红黄绿三个按钮放在左边工具栏顶上，
     // 左边工具栏透出系统的毛玻璃（界面里那一栏是半透明的，其余部分都有自己的底色）
