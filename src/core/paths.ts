@@ -1,3 +1,4 @@
+import { mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 /**
@@ -9,6 +10,8 @@ import { join, resolve } from 'node:path';
  */
 
 type Kind = 'projects' | 'downloads' | 'replicaOut' | 'works' | 'assets' | 'renders';
+
+const KINDS: Kind[] = ['projects', 'downloads', 'replicaOut', 'works', 'assets', 'renders'];
 
 const DEV_NAMES: Record<Kind, string> = {
   projects: 'projects',
@@ -40,4 +43,19 @@ export function dataDir(kind: Kind): string {
   if (override) return resolve(override);
   const appRoot = process.env.SHOTPILOT_DATA;
   return appRoot ? resolve(appRoot, APP_NAMES[kind]) : resolve(join(process.cwd(), DEV_NAMES[kind]));
+}
+
+/**
+ * Mac 软件启动时把子文件夹都建好。
+ * 不然用户第一次在访达里打开「文稿/ShotPilot」看到的是空文件夹，会以为软件没装好。
+ */
+export function ensureAppDataDirs(): void {
+  if (!process.env.SHOTPILOT_DATA) return;
+  for (const kind of KINDS) {
+    try {
+      mkdirSync(dataDir(kind), { recursive: true });
+    } catch {
+      // 建不了（比如指到了拔掉的外置硬盘）就等用到时再报错
+    }
+  }
 }

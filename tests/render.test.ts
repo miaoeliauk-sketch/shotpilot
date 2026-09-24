@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { absolutizeUrls, safeFileName } from '../src/export/render';
-import { dataDir } from '../src/core/paths';
+import { mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { dataDir, ensureAppDataDirs } from '../src/core/paths';
 
 describe('导出：站内地址补全', () => {
   it('只补 /files/ 和 /template-assets/ 开头的字符串，其他原样', () => {
@@ -42,6 +45,20 @@ describe('数据文件夹', () => {
     process.env.SHOTPILOT_DATA = '/Users/me/Documents/ShotPilot';
     process.env.SHOTPILOT_PROJECTS = '/Volumes/外置/项目';
     expect(dataDir('projects')).toBe('/Volumes/外置/项目');
+  });
+
+  it('Mac 软件启动时把中文子文件夹都建好，免得用户看到空文件夹', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sp-data-'));
+    process.env.SHOTPILOT_DATA = dir;
+    delete process.env.SHOTPILOT_PROJECTS;
+    ensureAppDataDirs();
+    expect(readdirSync(dir).sort()).toEqual(['下载的视频', '复刻包', '我的作品', '导出的视频', '拉片项目', '素材'].sort());
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it('开发时不建（数据就在项目目录下，用到再建）', () => {
+    delete process.env.SHOTPILOT_DATA;
+    expect(() => ensureAppDataDirs()).not.toThrow();
   });
 
   it('开发时在当前目录下，沿用英文名', () => {

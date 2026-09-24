@@ -16,7 +16,7 @@ import { DIMENSIONS } from '../core/vocabulary.js';
 import { toMarkdown } from '../export/notes.js';
 import { toHandoffJson } from '../export/handoff.js';
 import { renderTemplate } from '../export/render.js';
-import { dataDir } from '../core/paths.js';
+import { dataDir, ensureAppDataDirs } from '../core/paths.js';
 import { createWork, deleteWork, listWorks, loadWork, saveAsset, saveWork } from '../core/works.js';
 import type { ReelProject, Shot } from '../core/types.js';
 
@@ -591,6 +591,8 @@ const server = createServer((req, res) => {
       sendError(res, 500, err instanceof Error ? err.message : '服务端错误');
     });
 });
+
+ensureAppDataDirs();
 
 server.listen(PORT, '127.0.0.1', async () => {
   const health = await checkToolchain();
