@@ -54,8 +54,9 @@ describe('上传的图片', () => {
     expect(readdirSync(join(dir, '素材')).some((f) => f.endsWith('.pdf'))).toBe(false);
   });
 
+  // 要真的跑一次 ffprobe；Mac 上第一次启动它会做签名检查，要好几秒
   it('视频打不开就拒绝，也不留下文件', async () => {
     await expect(saveAsset(Buffer.from('not-a-video'), 'a.mp4')).rejects.toThrow('打不开');
     expect(readdirSync(join(dir, '素材')).some((f) => f.endsWith('.mp4'))).toBe(false);
-  });
+  }, 60_000);
 });
