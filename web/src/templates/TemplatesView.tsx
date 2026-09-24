@@ -7,7 +7,7 @@ import { ROLL_COLORS } from '../clip/ShotInspector';
 import { Button, Spinner } from '../ui/controls';
 import { Icon } from '../ui/icons';
 import { BottomPanel, Inspector, Toolbar, Workspace } from '../ui/layout';
-import { hud } from '../ui/overlay';
+import { Sheet, hud } from '../ui/overlay';
 import { WorkCard } from '../works/WorkCard';
 import { useWorks } from '../works/useWorks';
 
@@ -22,6 +22,7 @@ export function TemplatesView({ nav }: { nav: Nav }) {
   const [candidates, setCandidates] = useState<ReplicaCandidate[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [exportingKey, setExportingKey] = useState<string | null>(null);
+  const [howTo, setHowTo] = useState(false);
   const { works, remove, confirmElement } = useWorks();
   const selected = TEMPLATES.find((t) => t.id === selectedId) ?? TEMPLATES[0];
 
@@ -94,16 +95,17 @@ export function TemplatesView({ nav }: { nav: Nav }) {
             {TEMPLATES.map((t) => (
               <TemplateCard key={t.id} template={t} selected={t.id === selected?.id} onSelect={() => setSelectedId(t.id)} onUse={() => void create(t)} />
             ))}
-            <div className="card placeholder-card">
+            <button type="button" className="card placeholder-card" onClick={() => setHowTo(true)}>
               <div className="card-media dashed">
                 <Icon.plus size={22} />
-                <span>下一个复刻的镜头会出现在这里</span>
-                <span className="small">在「拉片」里选中镜头，导出复刻包</span>
+                <span>做一个新模板</span>
+                <span className="small">点这里看怎么做</span>
               </div>
-            </div>
+            </button>
           </div>
 
           <h2 className="section-title">标成要复刻的镜头</h2>
+          <p className="section-hint section-hint-top">想把哪个做成模板：导出复刻包，把里面的 clip.mp4 发给 Claude</p>
           {candidates === null ? <Spinner /> : candidates.length === 0 ? (
             <p className="section-hint">在「拉片」里把镜头标成 B-roll、叠加层或字卡，就会列在这里</p>
           ) : (
@@ -134,7 +136,35 @@ export function TemplatesView({ nav }: { nav: Nav }) {
         </div>
       </Workspace>
       {confirmElement}
+      {howTo && <HowToSheet onClose={() => setHowTo(false)} />}
     </>
+  );
+}
+
+/**
+ * 做新模板的步骤。软件自己做不出模板：复刻要一帧一帧对比着写代码，这一步由 Claude 来做，
+ * 做好的模板随软件更新一起到。这里把步骤说清楚，别让人以为导出复刻包后模板会自己冒出来。
+ */
+function HowToSheet({ onClose }: { onClose: () => void }) {
+  return (
+    <Sheet
+      title="做一个新模板"
+      width={500}
+      onCancel={onClose}
+      actions={(
+        <>
+          <Button onClick={() => void api.revealReplicaFolder().catch((e: Error) => hud(e.message, 'error'))}><Icon.folder size={14} />打开复刻包文件夹</Button>
+          <Button variant="primary" onClick={onClose}>知道了</Button>
+        </>
+      )}
+    >
+      <ol className="steps">
+        <li><b>导出复刻包</b>：在「拉片」里选中想复刻的镜头，点「导出这个镜头的复刻包」。已经导出过的，下面列表里会显示「复刻包已导出」</li>
+        <li><b>发给 Claude</b>：打开复刻包文件夹，找到这个镜头的文件夹（名字是「视频名-镜头号」），把里面的 <code>clip.mp4</code> 直接拖进和 Claude 的对话里，说「把这个做成模板」</li>
+        <li><b>更新软件</b>：Claude 做好、对比过和原片一样之后，会告诉你下载新的安装包。装好后新模板就出现在这里</li>
+      </ol>
+      <p className="sheet-text small-text">为什么不能一键生成：复刻要一帧一帧和原片对比、反复调整，才能做到现在这两个模板这么像。</p>
+    </Sheet>
   );
 }
 

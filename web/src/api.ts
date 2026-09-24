@@ -107,6 +107,7 @@ export const api = {
   /** 在访达里显示。path 不填打开导出的视频文件夹；root 打开整个 ShotPilot 文件夹 */
   reveal: (path?: string) => request<{ ok: true }>('/api/reveal', json('POST', { path })),
   revealRoot: () => request<{ ok: true }>('/api/reveal', json('POST', { kind: 'root' })),
+  revealReplicaFolder: () => request<{ ok: true }>('/api/reveal', json('POST', { kind: 'replicaOut' })),
 };
 
 /**

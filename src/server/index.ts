@@ -270,6 +270,13 @@ async function handleTemplateApi(req: IncomingMessage, res: ServerResponse, part
       sendJson(res, 200, { ok: true });
       return true;
     }
+    if (body.kind === 'replicaOut') {
+      const dir = dataDir('replicaOut');
+      mkdirSync(dir, { recursive: true });
+      revealInFinder(dir);
+      sendJson(res, 200, { ok: true });
+      return true;
+    }
     const target = typeof body.path === 'string' ? resolve(body.path) : dataDir('renders');
     const allowed = (['renders', 'works', 'assets', 'replicaOut', 'projects', 'downloads'] as const).map((k) => dataDir(k));
     if (!allowed.some((dir) => target === dir || target.startsWith(dir + '/'))) { sendError(res, 403, '只能打开 ShotPilot 自己的文件夹'); return true; }
