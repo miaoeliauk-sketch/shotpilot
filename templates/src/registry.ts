@@ -4,6 +4,8 @@ import { DialogueShot } from './dialogue-shot/DialogueShot';
 import * as dialogue from './dialogue-shot/params';
 import { AvatarCard } from './avatar-card/AvatarCard';
 import * as avatar from './avatar-card/params';
+import { NewsHeadline } from './news-headline/NewsHeadline';
+import * as news from './news-headline/params';
 
 /**
  * 工作台里能用的模板。
@@ -27,6 +29,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...avatar.meta,
     component: AvatarCard,
     toProps: (p) => avatar.toProps(p as unknown as avatar.AvatarParams),
+  },
+  {
+    ...news.meta,
+    component: NewsHeadline,
+    toProps: (p) => news.toProps(p as unknown as news.NewsParams),
   },
 ];
 

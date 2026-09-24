@@ -229,6 +229,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | --- | --- | --- |
 | [`replica-s002`](examples/replica-s002/) | 2 秒的圆形头像卡片，投影在转 | SSIM 0.996 |
 | [`replica-s003`](examples/replica-s003/) | 9 秒的插画镜头：旋转拉远 + 三个对话气泡 + 推近，带运动模糊 | SSIM 0.977 |
+| [`news-headline`](templates/src/news-headline/) | 5 秒的新闻解读开头：金色大标题逐字浮现 + 墨迹转场 + 正文划重点 + 推近特写 | SSIM 0.868 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 
