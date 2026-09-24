@@ -6,6 +6,16 @@ import { AvatarCard } from './avatar-card/AvatarCard';
 import * as avatar from './avatar-card/params';
 import { NewsHeadline } from './news-headline/NewsHeadline';
 import * as news from './news-headline/params';
+import { BigNumber } from './big-number/BigNumber';
+import * as bigNumber from './big-number/params';
+import { DocHighlight } from './doc-highlight/DocHighlight';
+import * as docHighlight from './doc-highlight/params';
+import { ProductBubbles } from './product-bubbles/ProductBubbles';
+import * as productBubbles from './product-bubbles/params';
+import { PhotoTitle } from './photo-title/PhotoTitle';
+import * as photoTitle from './photo-title/params';
+import { PointingInterview } from './pointing-interview/PointingInterview';
+import * as pointingInterview from './pointing-interview/params';
 
 /**
  * 工作台里能用的模板。
@@ -34,6 +44,31 @@ export const TEMPLATES: TemplateDef[] = [
     ...news.meta,
     component: NewsHeadline,
     toProps: (p) => news.toProps(p as unknown as news.NewsParams),
+  },
+  {
+    ...bigNumber.meta,
+    component: BigNumber,
+    toProps: (p) => bigNumber.toProps(p as unknown as bigNumber.BigNumberParams),
+  },
+  {
+    ...docHighlight.meta,
+    component: DocHighlight,
+    toProps: (p) => docHighlight.toProps(p as unknown as docHighlight.DocHighlightParams),
+  },
+  {
+    ...productBubbles.meta,
+    component: ProductBubbles,
+    toProps: (p) => productBubbles.toProps(p as unknown as productBubbles.ProductBubblesParams),
+  },
+  {
+    ...photoTitle.meta,
+    component: PhotoTitle,
+    toProps: (p) => photoTitle.toProps(p as unknown as photoTitle.PhotoTitleParams),
+  },
+  {
+    ...pointingInterview.meta,
+    component: PointingInterview,
+    toProps: (p) => pointingInterview.toProps(p as unknown as pointingInterview.PointingInterviewParams),
   },
 ];
 

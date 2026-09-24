@@ -230,6 +230,11 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`replica-s002`](examples/replica-s002/) | 2 秒的圆形头像卡片，投影在转 | SSIM 0.996 |
 | [`replica-s003`](examples/replica-s003/) | 9 秒的插画镜头：旋转拉远 + 三个对话气泡 + 推近，带运动模糊 | SSIM 0.977 |
 | [`news-headline`](templates/src/news-headline/) | 5 秒的新闻解读开头：金色大标题逐字浮现 + 墨迹转场 + 正文划重点 + 推近特写 | SSIM 0.868 |
+| [`big-number`](templates/src/big-number/) | 5 秒的金色发光大数字「400+」，背景可以放视频 | SSIM 0.903 |
+| [`doc-highlight`](templates/src/doc-highlight/) | 5 秒：旧墙上升起新闻稿 → 推近 → 正文特写，荧光笔划重点 | SSIM 0.797 |
+| [`product-bubbles`](templates/src/product-bubbles/) | 4 秒：产品大字 + 三个功能圆球依次长出来，镜头推向其中一个 | SSIM 0.857 |
+| [`photo-title`](templates/src/photo-title/) | 6.5 秒：黑白照片闪白切换，一组竖排大字标题逐个出现 | SSIM 0.828 |
+| [`pointing-interview`](templates/src/pointing-interview/) | 11 秒：指向人物 + 逐字标题 → 笔刷转场 → 对话场景和对话框 | SSIM 0.840 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 
