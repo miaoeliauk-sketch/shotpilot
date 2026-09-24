@@ -1,12 +1,12 @@
-/** 打包模板工作室（React + Remotion 播放器）成 web/js/studio.js，拉片界面按需加载 */
+/** 打包界面（React + Remotion 播放器）成 web/js/app.js，web/index.html 加载它 */
 import { build } from 'esbuild';
 import { resolve } from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
 const started = Date.now();
 await build({
-  entryPoints: [resolve(root, 'web/src/studio/main.tsx')],
-  outfile: resolve(root, 'web/js/studio.js'),
+  entryPoints: [resolve(root, 'web/src/main.tsx')],
+  outfile: resolve(root, 'web/js/app.js'),
   bundle: true,
   format: 'esm',
   platform: 'browser',

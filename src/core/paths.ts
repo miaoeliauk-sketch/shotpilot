@@ -37,6 +37,11 @@ const OVERRIDES: Partial<Record<Kind, string>> = {
   replicaOut: 'SHOTPILOT_REPLICA_OUT',
 };
 
+/** 所有用户数据的外层文件夹：Mac 软件里是「文稿/ShotPilot」，开发时是项目目录 */
+export function dataRoot(): string {
+  return resolve(process.env.SHOTPILOT_DATA ?? process.cwd());
+}
+
 export function dataDir(kind: Kind): string {
   const envVar = OVERRIDES[kind];
   const override = envVar ? process.env[envVar] : undefined;

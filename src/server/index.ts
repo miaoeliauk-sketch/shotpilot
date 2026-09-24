@@ -1,12 +1,13 @@
 import { spawn } from 'node:child_process';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, statSync } from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import { readFile } from 'node:fs/promises';
-import { extname, join, resolve } from 'node:path';
+import { extname, join, parse, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { analyzeVideo, resplit } from '../analyze/pipeline.js';
 import { downloadVideo, extractUrl } from '../analyze/fetch.js';
-import { buildReplicaPackage } from '../export/replica.js';
+import { buildReplicaPackage, replicaDirName } from '../export/replica.js';
 import { detectCuts, mergeWithPrevious, splitShot, splitShotByCuts } from '../analyze/shots.js';
 import { generateThumbnailFor, generateThumbnails } from '../analyze/thumbnails.js';
 import { autoAnnotate, visionConfigFromEnv } from '../analyze/vision.js';
@@ -16,7 +17,8 @@ import { DIMENSIONS } from '../core/vocabulary.js';
 import { toMarkdown } from '../export/notes.js';
 import { toHandoffJson } from '../export/handoff.js';
 import { renderTemplate } from '../export/render.js';
-import { dataDir, ensureAppDataDirs } from '../core/paths.js';
+import { dataDir, dataRoot, ensureAppDataDirs } from '../core/paths.js';
+import { safeFileName } from '../core/names.js';
 import { createWork, deleteWork, listWorks, loadWork, saveAsset, saveWork } from '../core/works.js';
 import type { ReelProject, Shot } from '../core/types.js';
 
@@ -256,9 +258,14 @@ async function handleTemplateApi(req: IncomingMessage, res: ServerResponse, part
     return true;
   }
 
-  // ── 在访达里显示 ──  只允许用户数据目录里的东西
+  // ── 在访达里显示 ──  只允许用户数据目录里的东西。{kind:'root'} 打开整个 ShotPilot 文件夹
   if (parts[1] === 'reveal' && req.method === 'POST') {
     const body = (await readBody(req)) as Record<string, unknown>;
+    if (body.kind === 'root') {
+      revealInFinder(dataRoot());
+      sendJson(res, 200, { ok: true });
+      return true;
+    }
     const target = typeof body.path === 'string' ? resolve(body.path) : dataDir('renders');
     const allowed = (['renders', 'works', 'assets', 'replicaOut', 'projects', 'downloads'] as const).map((k) => dataDir(k));
     if (!allowed.some((dir) => target === dir || target.startsWith(dir + '/'))) { sendError(res, 403, '只能打开 ShotPilot 自己的文件夹'); return true; }
@@ -315,6 +322,57 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
   }
 
   if (await handleTemplateApi(req, res, parts)) return true;
+
+  // POST /api/videos —— 把拖进窗口的视频存进「下载的视频」，返回路径，再走正常的新建拉片
+  if (parts[1] === 'videos' && req.method === 'POST') {
+    const raw = decodeURIComponent(String(req.headers['x-filename'] ?? 'video.mp4'));
+    const { name, ext } = parse(raw);
+    if (!/^\.(mp4|mov|m4v|webm|mkv)$/i.test(ext)) {
+      sendError(res, 400, '只能拖入视频文件（mp4、mov、m4v、webm、mkv）');
+      return true;
+    }
+    const dir = dataDir('downloads');
+    mkdirSync(dir, { recursive: true });
+    const base = safeFileName(name, '视频');
+    let target = join(dir, `${base}${ext.toLowerCase()}`);
+    // 同名的不覆盖，后面加编号
+    for (let n = 2; existsSync(target); n++) target = join(dir, `${base}-${n}${ext.toLowerCase()}`);
+    try {
+      await pipeline(req, createWriteStream(target));
+      sendJson(res, 200, { path: target });
+    } catch (err) {
+      sendError(res, 500, err instanceof Error ? `保存视频失败：${err.message}` : '保存视频失败');
+    }
+    return true;
+  }
+
+  // GET /api/replica-candidates —— 所有项目里标成 B-roll / 叠加层 / 字卡的镜头，以及复刻包导出过没有
+  if (parts[1] === 'replica-candidates' && req.method === 'GET') {
+    const outRoot = dataDir('replicaOut');
+    const rows: unknown[] = [];
+    for (const summary of await listProjects()) {
+      let project: ReelProject;
+      try { project = await loadProject(summary.id); } catch { continue; }
+      for (const shot of project.shots) {
+        if (shot.roll !== 'b-roll' && shot.roll !== 'overlay' && shot.roll !== 'title') continue;
+        const dir = join(outRoot, replicaDirName(project, shot));
+        rows.push({
+          projectId: project.id,
+          projectTitle: project.title,
+          shotId: shot.id,
+          index: shot.index,
+          roll: shot.roll,
+          start: shot.start,
+          end: shot.end,
+          thumbnail: shot.thumbnail,
+          exportedDir: existsSync(dir) ? dir : null,
+        });
+      }
+    }
+    sendJson(res, 200, rows);
+    return true;
+  }
+
   if (parts[1] !== 'projects') return false;
 
   // GET /api/projects

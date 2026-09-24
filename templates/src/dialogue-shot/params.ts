@@ -1,4 +1,4 @@
-import type { Section, TemplateMeta } from '../form';
+import type { Section, TemplateMeta, TemplateTimeline, TimelineItem } from '../form';
 import type { BubbleSpec, DialogueShotProps, Move } from './DialogueShot';
 
 /**
@@ -47,10 +47,15 @@ export type DialogueParams = {
 const LINEAR: [number, number, number, number] = [0, 0, 1, 1];
 const NEVER = 1e9;
 
+/** 各个动作用多少帧（原片实测），时间轴上画进场、飞走那一段也用它 */
+const DROP_IN_FRAMES = 57.5;
+const RISE_IN_FRAMES = 26.45;
+const FLY_OUT_FRAMES = 27.95;
+
 /** 气泡 1 的入场：从上方 120px 落下，同时淡入、由虚变实 */
 function dropIn(a: number): Move {
   return {
-    start: a, end: a + 57.5, distance: -120.3, easing: [0.227, 0.256, 0.353, 0.945],
+    start: a, end: a + DROP_IN_FRAMES, distance: -120.3, easing: [0.227, 0.256, 0.353, 0.945],
     opacity: 0, fade: { start: a - 1.53, end: a + 55.37, easing: LINEAR },
     blur: 11, blurEnd: a + 28.97,
   };
@@ -59,8 +64,8 @@ function dropIn(a: number): Move {
 /** 气泡 2 的入场：从画面下方外面升上来，减速停住 */
 function riseIn(a: number): Move {
   return {
-    start: a, end: a + 26.45, distance: 377.4, easing: [0.015, 0.098, 0.159, 0.871],
-    opacity: 1, fade: { start: a, end: a + 26.45, easing: LINEAR },
+    start: a, end: a + RISE_IN_FRAMES, distance: 377.4, easing: [0.015, 0.098, 0.159, 0.871],
+    opacity: 1, fade: { start: a, end: a + RISE_IN_FRAMES, easing: LINEAR },
     blur: 0, blurEnd: a,
   };
 }
@@ -68,8 +73,8 @@ function riseIn(a: number): Move {
 /** 气泡 1 的离场：加速上飞，飞出画面 */
 function flyOut(l: number): Move {
   return {
-    start: l, end: l + 27.95, distance: -534.5, easing: [0.207, 0.039, 0.888, 0.085],
-    opacity: 1, fade: { start: l, end: l + 27.95, easing: LINEAR },
+    start: l, end: l + FLY_OUT_FRAMES, distance: -534.5, easing: [0.207, 0.039, 0.888, 0.085],
+    opacity: 1, fade: { start: l, end: l + FLY_OUT_FRAMES, easing: LINEAR },
     blur: 0, blurEnd: 0,
   };
 }
@@ -215,16 +220,19 @@ const form: Section[] = [
         fields: [
           { kind: 'text', key: 'text', label: '文字' },
           { kind: 'text', key: 'highlight', label: '标黄的字', placeholder: '例如：48 小时内（留空不标）', hint: '必须和上面文字里的某一段完全一样' },
-          { kind: 'number', key: 'appearAt', label: '出现时间', min: 0, max: 60, step: 0.1, unit: '秒' },
           {
-            kind: 'select', key: 'enterStyle', label: '怎么进来',
-            options: [{ value: 'drop', label: '从上方落下（慢慢变清楚）' }, { value: 'rise', label: '从下方升起（快）' }],
+            kind: 'select', key: 'enterStyle', label: '怎么进来', half: true,
+            options: [{ value: 'drop', label: '从上方落下' }, { value: 'rise', label: '从下方升起' }],
           },
           {
-            kind: 'select', key: 'exitStyle', label: '怎么离开',
+            kind: 'select', key: 'exitStyle', label: '怎么离开', half: true,
             options: [{ value: 'fly', label: '往上飞走' }, { value: 'stay', label: '一直停到结尾' }],
           },
-          { kind: 'number', key: 'leaveAt', label: '飞走时间', min: 0, max: 60, step: 0.1, unit: '秒', hint: '选了「一直停到结尾」就不用管' },
+          { kind: 'number', key: 'appearAt', label: '第几秒出现', min: 0, max: 60, step: 0.1, unit: '秒', half: true },
+          {
+            kind: 'number', key: 'leaveAt', label: '第几秒飞走', min: 0, max: 60, step: 0.1, unit: '秒', half: true,
+            enabledWhen: (v) => v.exitStyle === 'fly',
+          },
           { kind: 'number', key: 'y', label: '上下位置', min: 5, max: 95, step: 0.5, unit: '%', hint: '50 = 画面正中' },
         ],
         newItem: (items) => {
@@ -250,6 +258,71 @@ const form: Section[] = [
   },
 ];
 
+// ── 时间轴 ──────────────────────────────────────────────────────────────
+
+/** 拖出来的时间对齐到整帧，再留两位小数，免得表单里出现 1.4666666 */
+const snap = (t: number) => Math.round((Math.round(t * FPS) / FPS) * 100) / 100;
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+
+export const timeline: TemplateTimeline = {
+  tracks: (raw) => {
+    const p = raw as unknown as DialogueParams;
+    const camera: TimelineItem[] = [{
+      id: 'zoomOut', label: '开场特写 → 旋转拉远', start: 0, end: p.zoomOutSeconds,
+      select: { section: '开场特写 → 拉远' }, drag: { end: true },
+    }];
+    if (p.endScale > 1) {
+      camera.push({
+        id: 'pushIn', label: '推近', start: p.pushInAt, end: p.pushInAt + p.pushInSeconds,
+        select: { section: '推近' }, drag: { move: true, start: true, end: true },
+      });
+    }
+    return [
+      { id: 'camera', label: '镜头', kind: 'camera', items: camera },
+      ...p.bubbles.map((b, i) => {
+        const fly = b.exitStyle === 'fly';
+        const end = Math.max(b.appearAt, fly ? b.leaveAt + FLY_OUT_FRAMES / FPS : p.duration);
+        const enter = (b.enterStyle === 'drop' ? DROP_IN_FRAMES : RISE_IN_FRAMES) / FPS;
+        const phases = [{ label: b.enterStyle === 'drop' ? '落下' : '升起', start: b.appearAt, end: Math.min(end, b.appearAt + enter) }];
+        if (fly) phases.push({ label: '飞走', start: b.leaveAt, end });
+        return {
+          id: `bubble-${i}`, label: `气泡 ${i + 1}`, kind: 'element' as const,
+          items: [{
+            id: `bubble-${i}`, label: b.text || '（还没写字）', start: b.appearAt, end, phases,
+            select: { list: 'bubbles', index: i }, drag: { move: true, start: true, end: fly },
+          }],
+        };
+      }),
+    ];
+  },
+  apply: (raw, itemId, edge, start, end) => {
+    const p = raw as unknown as DialogueParams;
+    if (itemId === 'zoomOut') return { ...raw, zoomOutSeconds: clamp(snap(end), 0.5, 10) };
+    if (itemId === 'pushIn') {
+      if (edge === 'move') return { ...raw, pushInAt: clamp(snap(start), 0, 60) };
+      if (edge === 'start') {
+        const oldEnd = p.pushInAt + p.pushInSeconds;
+        const s = clamp(snap(start), 0, oldEnd - 0.1);
+        return { ...raw, pushInAt: s, pushInSeconds: snap(oldEnd - s) };
+      }
+      return { ...raw, pushInSeconds: clamp(snap(end - p.pushInAt), 0.1, 10) };
+    }
+    const i = Number(/^bubble-(\d+)$/.exec(itemId)?.[1] ?? -1);
+    const b = p.bubbles[i];
+    if (!b) return raw;
+    let next: BubbleParams;
+    if (edge === 'move') {
+      const s = clamp(snap(start), 0, 60);
+      next = { ...b, appearAt: s, leaveAt: clamp(snap(b.leaveAt + (s - b.appearAt)), 0, 60) };
+    } else if (edge === 'start') {
+      next = { ...b, appearAt: clamp(snap(start), 0, b.exitStyle === 'fly' ? b.leaveAt - 0.1 : 60) };
+    } else {
+      next = { ...b, leaveAt: clamp(snap(end - FLY_OUT_FRAMES / FPS), b.appearAt + 0.1, 60) };
+    }
+    return { ...raw, bubbles: p.bubbles.map((x, j) => (j === i ? next : x)) };
+  },
+};
+
 export const meta: TemplateMeta = {
   id: 'dialogue-shot',
   name: '对话气泡 · 旋转拉远',
@@ -261,4 +334,5 @@ export const meta: TemplateMeta = {
   posterFrame: 125,
   form,
   defaultParams: defaultParams as unknown as Record<string, unknown>,
+  timeline,
 };

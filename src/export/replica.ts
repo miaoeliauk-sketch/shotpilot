@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { FFMPEG, runOrThrow } from '../analyze/ffmpeg.js';
 import { type ReelProject, type Shot } from '../core/types.js';
 import { labelOf } from '../core/vocabulary.js';
+import { safeFileName } from '../core/names.js';
 
 /**
  * 复刻包：喂给 coding agent 去还原一个镜头的全部素材。
@@ -234,6 +235,14 @@ export interface BuildResult {
   frameCount: number;
 }
 
+/**
+ * 复刻包的文件夹名：「视频名-s003」。
+ * 带上视频名，两条视频里同号的镜头才不会互相覆盖；在访达里也一眼看出是哪条视频的。
+ */
+export function replicaDirName(project: ReelProject, shot: Shot): string {
+  return `${safeFileName(project.title, '未命名视频')}-${shot.id}`;
+}
+
 /** 为一个镜头生成完整的复刻包。 */
 export async function buildReplicaPackage(
   project: ReelProject,
@@ -246,7 +255,7 @@ export async function buildReplicaPackage(
     width: options.width ?? 720,
   };
 
-  const dir = join(outputRoot, `replica-${shot.id}`);
+  const dir = join(outputRoot, replicaDirName(project, shot));
   await mkdir(dir, { recursive: true });
 
   const fps = project.source.fps;

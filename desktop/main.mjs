@@ -123,10 +123,16 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 1024,
-    minHeight: 680,
+    minWidth: 1100,
+    minHeight: 720,
     title: 'ShotPilot',
-    backgroundColor: '#0f1115',
+    // 和 Mac 自带软件一样：没有单独的标题栏，红黄绿三个按钮放在左边工具栏顶上，
+    // 左边工具栏透出系统的毛玻璃（界面里那一栏是半透明的，其余部分都有自己的底色）
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 12, y: 19 },
+    vibrancy: 'sidebar',
+    visualEffectState: 'followWindow',
+    backgroundColor: '#00000000',
     show: false,
   });
   mainWindow.once('ready-to-show', () => mainWindow?.show());

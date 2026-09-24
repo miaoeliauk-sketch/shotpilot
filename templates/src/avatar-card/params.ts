@@ -1,4 +1,4 @@
-import type { Section, TemplateMeta } from '../form';
+import type { Section, TemplateMeta, TemplateTimeline } from '../form';
 import type { AvatarCardProps } from './AvatarCard';
 
 const FPS = 30;
@@ -52,6 +52,21 @@ const form: Section[] = [
   },
 ];
 
+/** 时间轴上就一块：投影转多久。拖右边那头改视频时长 */
+export const timeline: TemplateTimeline = {
+  tracks: (raw) => {
+    const p = raw as unknown as AvatarParams;
+    return [{
+      id: 'card', label: '头像', kind: 'element',
+      items: [{ id: 'spin', label: '投影绕着头像转', start: 0, end: p.duration, select: { section: '画面' }, drag: { end: true } }],
+    }];
+  },
+  apply: (raw, itemId, edge, _start, end) => {
+    if (itemId !== 'spin' || edge !== 'end') return raw;
+    return { ...raw, duration: Math.min(30, Math.max(1, Math.round(end * 10) / 10)) };
+  },
+};
+
 export const meta: TemplateMeta = {
   id: 'avatar-card',
   name: '圆形头像卡片',
@@ -63,4 +78,5 @@ export const meta: TemplateMeta = {
   posterFrame: 40,
   form,
   defaultParams: defaultParams as unknown as Record<string, unknown>,
+  timeline,
 };

@@ -86,6 +86,10 @@ export interface ProjectSummary {
   shotCount: number;
   reviewedCount: number;
   updatedAt: string;
+  /** 还没归类（A-roll / B-roll…）的镜头数 */
+  unsortedCount: number;
+  /** 第一个镜头的缩略图文件名，列表里当封面 */
+  cover?: string;
   /** 源视频是否还在原处。移动过位置就播不了，界面要提示而不是静默出错。 */
   sourceExists: boolean;
 }
@@ -107,6 +111,8 @@ export async function listProjects(): Promise<ProjectSummary[]> {
         duration: p.source.duration,
         shotCount: p.shots.length,
         reviewedCount: p.shots.filter((s) => s.reviewed).length,
+        unsortedCount: p.shots.filter((s) => s.roll === 'unset').length,
+        cover: p.shots.find((s) => s.thumbnail)?.thumbnail,
         updatedAt: p.updatedAt,
         sourceExists: existsSync(p.source.path),
       });

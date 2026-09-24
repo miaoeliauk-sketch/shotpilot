@@ -82,6 +82,7 @@
 | `core/paths.ts` | 用户数据放在哪（开发时在项目目录，软件里在「文稿/ShotPilot」） |
 | `core/works.ts` | 我的作品（原子写盘）、上传的图片（按内容取名去重） |
 | `templates/src/` | 模板组件 + 简单参数/中文表单/换算，`registry.ts` 统一登记 |
-| `web/src/studio/` | 「用模板做视频」界面（React + Remotion 播放器），打包成 `web/js/studio.js` 按需加载 |
+| `web/src/` | 整个界面（React + Remotion 播放器），打包成 `web/js/app.js`。照 macOS 的样子：左边工具栏、中间预览、右边参数、底下时间轴。`ui/` 是按钮、菜单、弹出面板这些基础控件；`clip/` 拉片；`templates/` 选模板；`works/` 作品和模板编辑 |
+| `templates/src/*/params.ts` 的 `timeline` | 模板编辑器底部时间轴：怎么从参数画出色块、拖完怎么换算回参数（纯函数，有测试） |
 | `desktop/` | Mac 软件：主程序、打包脚本、冒烟测试 |
 | `server/` | 本地 HTTP。**必须支持 Range**，否则时间线拖拽不可用 |

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { defaultParams as dialogueDefaults, toProps as dialogueProps } from '../templates/src/dialogue-shot/params';
-import { defaultParams as avatarDefaults, toProps as avatarProps } from '../templates/src/avatar-card/params';
+import { defaultParams as dialogueDefaults, meta as dialogueMeta, toProps as dialogueProps } from '../templates/src/dialogue-shot/params';
+import { defaultParams as avatarDefaults, meta as avatarMeta, toProps as avatarProps } from '../templates/src/avatar-card/params';
 
 describe('对话气泡模板：简单参数换算', () => {
   const props = dialogueProps(dialogueDefaults);
@@ -68,5 +68,65 @@ describe('对话气泡模板：简单参数换算', () => {
 describe('头像卡片模板', () => {
   it('默认时长复现原片 65 帧', () => {
     expect(avatarProps(avatarDefaults).durationInFrames).toBe(65);
+  });
+});
+
+describe('对话气泡模板：时间轴', () => {
+  const tl = dialogueMeta.timeline!;
+  const params = dialogueDefaults as unknown as Record<string, unknown>;
+  const tracks = tl.tracks(params);
+
+  it('一条镜头轨，每个气泡一条轨；气泡块从出现画到飞走结束', () => {
+    expect(tracks.map((t) => t.label)).toEqual(['镜头', '气泡 1', '气泡 2', '气泡 3']);
+    const b1 = tracks[1]!.items[0]!;
+    expect(b1.start).toBeCloseTo(1.47, 5);
+    expect(b1.end).toBeCloseTo(4.84 + 27.95 / 30, 5);
+    expect(b1.phases?.map((p) => p.label)).toEqual(['落下', '飞走']);
+    expect(b1.select).toEqual({ list: 'bubbles', index: 0 });
+  });
+
+  it('停到结尾的气泡画到视频结束，右边那头不能拖', () => {
+    const b3 = tracks[3]!.items[0]!;
+    expect(b3.end).toBeCloseTo(9.1, 5);
+    expect(b3.drag.end).toBeFalsy();
+  });
+
+  it('整块挪动：出现和飞走一起平移，并对齐到整帧', () => {
+    const next = tl.apply(params, 'bubble-0', 'move', 2.5, 99) as unknown as typeof dialogueDefaults;
+    expect(next.bubbles[0]!.appearAt).toBeCloseTo(2.5, 5);
+    expect(next.bubbles[0]!.leaveAt).toBeCloseTo(5.87, 5);
+    expect(next.bubbles[1]).toEqual(dialogueDefaults.bubbles[1]);
+  });
+
+  it('拖右边那头改飞走时间，扣掉飞走动作本身的长度', () => {
+    const next = tl.apply(params, 'bubble-0', 'end', 1.47, 6) as unknown as typeof dialogueDefaults;
+    expect(next.bubbles[0]!.leaveAt).toBeCloseTo(5.07, 5);
+  });
+
+  it('飞走不会被拖到出现之前', () => {
+    const next = tl.apply(params, 'bubble-0', 'end', 1.47, 0) as unknown as typeof dialogueDefaults;
+    expect(next.bubbles[0]!.leaveAt).toBeGreaterThan(next.bubbles[0]!.appearAt);
+  });
+
+  it('推近：拖左边那头，结束时间不变', () => {
+    const next = tl.apply(params, 'pushIn', 'start', 4.5, 0) as unknown as typeof dialogueDefaults;
+    expect(next.pushInAt).toBeCloseTo(4.5, 5);
+    expect(next.pushInAt + next.pushInSeconds).toBeCloseTo(4.92 + 1.78, 2);
+  });
+
+  it('拉远只能拖结束那头，改的是拉远用时', () => {
+    expect(tracks[0]!.items[0]!.drag).toEqual({ end: true });
+    const next = tl.apply(params, 'zoomOut', 'end', 0, 2.2) as unknown as typeof dialogueDefaults;
+    expect(next.zoomOutSeconds).toBeCloseTo(2.2, 5);
+  });
+});
+
+describe('头像卡片模板：时间轴', () => {
+  it('拖右边那头改视频时长，最短 1 秒', () => {
+    const tl = avatarMeta.timeline!;
+    const params = avatarDefaults as unknown as Record<string, unknown>;
+    expect(tl.tracks(params)[0]!.items[0]!.end).toBeCloseTo(2.17, 5);
+    expect(tl.apply(params, 'spin', 'end', 0, 4.04).duration).toBeCloseTo(4, 5);
+    expect(tl.apply(params, 'spin', 'end', 0, 0.2).duration).toBe(1);
   });
 });

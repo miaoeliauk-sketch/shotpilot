@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { replicaInstructions, safeClipDuration, shotManifest } from '../src/export/replica.js';
+import { replicaDirName, replicaInstructions, safeClipDuration, shotManifest } from '../src/export/replica.js';
 import { emptyShot } from '../src/analyze/shots.js';
 import type { ReelProject } from '../src/core/types.js';
 
@@ -105,5 +105,15 @@ describe('safeClipDuration', () => {
 
   it('时长不会变成负数', () => {
     expect(safeClipDuration({ start: 5, end: 5.01 }, 30)).toBe(0);
+  });
+});
+
+describe('replicaDirName', () => {
+  it('文件夹名带上视频名，两条视频里同号的镜头不会互相覆盖', () => {
+    const p = project();
+    const shot = p.shots[0]!;
+    expect(replicaDirName(p, shot)).toBe(`ref-${shot.id}`);
+    expect(replicaDirName({ ...p, title: '周末/快闪:预告' }, shot)).toBe(`周末_快闪_预告-${shot.id}`);
+    expect(replicaDirName({ ...p, title: '  ' }, shot)).toBe(`未命名视频-${shot.id}`);
   });
 });
