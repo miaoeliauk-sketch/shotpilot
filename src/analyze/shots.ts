@@ -147,7 +147,7 @@ export function emptyShot(index: number, start: number, end: number): Shot {
  */
 export function carryOverAnnotations(oldShots: Shot[], newShots: Shot[]): Shot[] {
   const annotated = oldShots.filter(
-    (s) => s.reviewed || s.note || s.roll !== 'unset' || !!s.library ||
+    (s) => s.reviewed || s.note || s.roll !== 'unset' || !!s.library || !!s.templateFit ||
       s.effects.length > 0 || s.elements.length > 0 ||
       Object.keys(s.annotation).length > 0,
   );
@@ -168,6 +168,8 @@ export function carryOverAnnotations(oldShots: Shot[], newShots: Shot[]): Shot[]
     return {
       ...shot,
       roll: best.roll,
+      rollSource: best.rollSource,
+      templateFit: best.templateFit ? { ...best.templateFit } : undefined,
       annotation: { ...best.annotation },
       annotationSource: { ...best.annotationSource },
       aiConfidence: best.aiConfidence ? { ...best.aiConfidence } : undefined,
@@ -220,8 +222,10 @@ export function splitShot(shots: Shot[], shotId: string, time: number): Shot[] {
   const first: Shot = { ...target, end: time };
   const second: Shot = {
     ...emptyShot(0, time, target.end),
-    // 归类大概率跨段不变，继承下来省一次按键；其余标注留空等人工确认
+    // 归类、适不适合做模板大概率跨段不变，继承下来省一次按键；其余标注留空等人工确认
     roll: target.roll,
+    rollSource: target.rollSource,
+    templateFit: target.templateFit,
   };
 
   const next = shots.flatMap((s) => (s.id === shotId ? [first, second] : [s]));
@@ -294,7 +298,7 @@ export function splitShotByCuts(shots: Shot[], shotId: string, cuts: Cut[]): Sho
     pieces.push(
       i === 0
         ? { ...target, end }
-        : { ...emptyShot(0, start, end), roll: target.roll },
+        : { ...emptyShot(0, start, end), roll: target.roll, rollSource: target.rollSource, templateFit: target.templateFit },
     );
   }
 

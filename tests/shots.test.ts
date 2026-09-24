@@ -192,3 +192,11 @@ describe('splitShotByCuts', () => {
     expect(out.map((s) => s.id)).toEqual(['s001', 's002', 's003', 's004']);
   });
 });
+
+describe('归类来源和适不适合做模板跟着镜头走', () => {
+  it('补刀后后半段继承归类、来源和适不适合做模板', () => {
+    const shots = [{ ...emptyShot(0, 0, 4), roll: 'b-roll' as const, rollSource: 'ai' as const, templateFit: { fit: true, reason: '图形', source: 'ai' as const } }];
+    const next = splitShot(shots, 's001', 2);
+    expect(next[1]).toMatchObject({ roll: 'b-roll', rollSource: 'ai', templateFit: { fit: true } });
+  });
+});

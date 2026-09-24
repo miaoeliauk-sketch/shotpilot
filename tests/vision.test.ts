@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { extractJson, sanitizeAnnotation } from '../src/analyze/vision.js';
+import { extractJson, mergeAiResult, sanitizeAnnotation } from '../src/analyze/vision.js';
+import { emptyShot } from '../src/analyze/shots.js';
 
 describe('extractJson', () => {
   it('吃裸 JSON', () => {
@@ -45,5 +46,40 @@ describe('sanitizeAnnotation', () => {
   it('模型返回 null 或字符串时不炸', () => {
     expect(sanitizeAnnotation(null).annotation).toEqual({});
     expect(sanitizeAnnotation('nope').annotation).toEqual({});
+  });
+});
+
+describe('AI 初判：归类和适不适合做模板', () => {
+  const base = () => ({ ...emptyShot(0, 0, 3) });
+
+  it('归类只认四种；适不适合做模板必须是真假值，理由限长', () => {
+    const got = sanitizeAnnotation({ roll: 'b-roll', templateFit: true, templateReason: '图形文字动画，代码画得出来而且理由写得特别特别长' });
+    expect(got.roll).toBe('b-roll');
+    expect(got.templateFit?.fit).toBe(true);
+    expect(got.templateFit!.reason.length).toBeLessThanOrEqual(20);
+    expect(sanitizeAnnotation({ roll: 'unset' }).roll).toBeUndefined();
+    expect(sanitizeAnnotation({ roll: 'c-roll', templateFit: 'yes' })).toMatchObject({ roll: undefined, templateFit: undefined });
+  });
+
+  it('没标过的镜头：AI 填上归类和适不适合做模板，来源记成 AI', () => {
+    const next = mergeAiResult(base(), sanitizeAnnotation({ roll: 'b-roll', templateFit: true, templateReason: '插画动画', shotSize: 'full' }));
+    expect(next.roll).toBe('b-roll');
+    expect(next.rollSource).toBe('ai');
+    expect(next.templateFit).toEqual({ fit: true, reason: '插画动画', source: 'ai' });
+    expect(next.annotation.shotSize).toBe('full');
+  });
+
+  it('人标过的归类不动，老项目里没有来源记录的也当人标的', () => {
+    const manual = { ...base(), roll: 'a-roll' as const, rollSource: 'manual' as const };
+    expect(mergeAiResult(manual, sanitizeAnnotation({ roll: 'b-roll' })).roll).toBe('a-roll');
+    const legacy = { ...base(), roll: 'a-roll' as const };
+    expect(mergeAiResult(legacy, sanitizeAnnotation({ roll: 'b-roll' })).roll).toBe('a-roll');
+    const byAi = { ...base(), roll: 'a-roll' as const, rollSource: 'ai' as const };
+    expect(mergeAiResult(byAi, sanitizeAnnotation({ roll: 'b-roll' })).roll).toBe('b-roll');
+  });
+
+  it('人改过的「适不适合做模板」不动', () => {
+    const manual = { ...base(), templateFit: { fit: false, reason: '', source: 'manual' as const } };
+    expect(mergeAiResult(manual, sanitizeAnnotation({ templateFit: true })).templateFit?.fit).toBe(false);
   });
 });

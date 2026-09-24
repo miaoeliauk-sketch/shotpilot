@@ -54,11 +54,12 @@ export type LibraryProps = {
   onSetupVision: () => void;
 };
 
-export function ShotInspector({ shot, index, total, onRoll, onAnnotate, onText, onReview, onExport, exporting, tab, onTab, library }: {
+export function ShotInspector({ shot, index, total, onRoll, onTemplateFit, onAnnotate, onText, onReview, onExport, exporting, tab, onTab, library }: {
   shot: Shot;
   index: number;
   total: number;
   onRoll: (roll: Shot['roll']) => void;
+  onTemplateFit: (fit: boolean | null) => void;
   onAnnotate: (field: AnnotationField, value: string | string[] | null) => void;
   onText: (shotId: string, draft: TextDraft) => void;
   onReview: () => void;
@@ -142,13 +143,29 @@ export function ShotInspector({ shot, index, total, onRoll, onAnnotate, onText, 
           onSetupVision={library.onSetupVision}
         />
       ) : (<>
-      <FormRow label="镜头归类">
+      <FormRow label="镜头归类" badge={shot.rollSource === 'ai' ? <span className="ai-badge" title="AI 初判的，还没人改过">AI</span> : null}>
         <Segmented
           label="镜头归类"
           allowEmpty
           value={shot.roll === 'unset' ? null : shot.roll}
           onChange={(v) => onRoll(v ?? 'unset')}
           options={ROLL_KINDS.filter((t) => t.value !== 'unset').map((t) => ({ value: t.value, label: t.label, title: tip(t), dot: ROLL_COLORS[t.value] }))}
+        />
+      </FormRow>
+
+      <FormRow
+        label="适合做模板吗"
+        badge={shot.templateFit?.source === 'ai' ? <span className="ai-badge" title="AI 初判的，还没人改过">AI</span> : null}
+        hint={shot.templateFit?.fit
+          ? `${shot.templateFit.reason ? `${shot.templateFit.reason}。` : ''}导出复刻包，把 clip.mp4 发给 Claude 就能做成模板`
+          : shot.templateFit?.reason || '文字、图形、插画、图片动效这类代码画得出来的才适合；真人实拍做不了'}
+      >
+        <Segmented
+          label="适合做模板吗"
+          allowEmpty
+          value={shot.templateFit ? (shot.templateFit.fit ? 'yes' : 'no') : null}
+          onChange={(v) => onTemplateFit(v === null ? null : v === 'yes')}
+          options={[{ value: 'yes', label: '适合做模板' }, { value: 'no', label: '做不了' }]}
         />
       </FormRow>
 

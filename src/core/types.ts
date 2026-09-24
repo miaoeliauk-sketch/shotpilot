@@ -97,6 +97,13 @@ export interface Shot {
   slots?: Slot[];
   /** 这个镜头是否要复刻。挑出来做复刻包时用它筛选。 */
   replicate?: boolean;
+  /** 归类是谁标的。AI 初判只改没人标过的，或者上次也是 AI 标的 */
+  rollSource?: AnnotationSource;
+  /**
+   * 适不适合复刻成模板：代码画得出来的（文字、图形、插画、图片动效、图表、转场）才适合，
+   * 真人实拍做不了。AI 初判先判一遍，人可以改。
+   */
+  templateFit?: TemplateFit;
   /** 素材库标签（B-roll 放进 Eagle 用），格式见 core/library.ts */
   library?: LibraryTags;
   /** 放进 Eagle 的记录。镜头边界变了（补刀、合并）就对不上了，要重新放 */
@@ -127,6 +134,13 @@ export interface LibraryTags {
   /** 谁填的：AI 打的、AI 打完人改过、人工填的 */
   source?: 'ai' | 'ai-edited' | 'manual';
   taggedAt?: string;
+}
+
+export interface TemplateFit {
+  fit: boolean;
+  /** 一句话理由，比如「图形文字动画」「真人实拍」 */
+  reason: string;
+  source: AnnotationSource;
 }
 
 export interface EagleRecord {

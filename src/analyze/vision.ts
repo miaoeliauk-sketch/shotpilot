@@ -4,7 +4,8 @@ import { join } from 'node:path';
 import { FFMPEG, run } from './ffmpeg.js';
 import { isValidTerm } from '../core/vocabulary.js';
 import { loadSettings } from '../core/settings.js';
-import type { Shot, ShotAnnotation } from '../core/types.js';
+import type { RollKind } from '../core/vocabulary.js';
+import type { Shot, ShotAnnotation, TemplateFit } from '../core/types.js';
 
 /**
  * AI 自动初判景别 / 运镜 / 构图 / 光线 / 机位。
@@ -55,9 +56,17 @@ export async function visionConfig(): Promise<VisionConfig | null> {
 }
 
 const SYSTEM_PROMPT = `你是影视摄影分析助手。用户会给你同一个镜头里按时间顺序抽取的若干帧。
-请判断这个镜头的摄影参数，只返回 JSON，不要任何解释文字。
+请判断这个镜头的归类和摄影参数，只返回 JSON，不要任何解释文字。
 
 字段与可选值（必须严格从中选取，不确定就省略该字段）：
+- roll: 镜头归类，四选一：
+  a-roll（主线画面：人物对着镜头讲话、口播）
+  b-roll（补充画面：没有人对镜头讲话，用来铺垫、示意、展示）
+  overlay（叠加层：截图、图表、画中画压在人物画面上）
+  title（字卡：画面主体就是文字）
+- templateFit: true 或 false。画面主要是电脑能「画」出来的（文字、图形、图标、插画、图片的摆放缩放和动效、图表、转场特效）填 true；
+  主要是摄像机拍的真实画面（真人、实景、实物）填 false
+- templateReason: 10 个字以内的中文理由，比如「图形文字动画」「插画加对话气泡」「真人口播」「实景拍摄」
 - shotSize: extreme-wide | wide | full | medium-full | medium | medium-close | close | closeup | extreme-closeup | insert
 - cameraMove: static | push-in | pull-out | pan | tilt | track | follow | crane | handheld | orbit | zoom | whip
 - composition: 数组，可多选：center | rule-of-thirds | symmetry | frame-in-frame | leading-lines | negative-space | over-shoulder | diagonal | fill-frame
@@ -108,13 +117,27 @@ export async function extractShotFrames(
   }
 }
 
+type Sanitized = {
+  annotation: ShotAnnotation;
+  elements: string[];
+  confidence: Record<string, number>;
+  roll?: Exclude<RollKind, 'unset'>;
+  templateFit?: { fit: boolean; reason: string };
+};
+
 /** 模型返回的东西一律当不可信数据校验，非法枚举值直接丢弃而不是写进项目。 */
-export function sanitizeAnnotation(raw: unknown): { annotation: ShotAnnotation; elements: string[]; confidence: Record<string, number> } {
+export function sanitizeAnnotation(raw: unknown): Sanitized {
   const out: ShotAnnotation = {};
   const confidence: Record<string, number> = {};
   let elements: string[] = [];
   if (typeof raw !== 'object' || raw === null) return { annotation: out, elements, confidence };
   const obj = raw as Record<string, unknown>;
+  const roll = typeof obj.roll === 'string' && obj.roll !== 'unset' && isValidTerm('roll', obj.roll)
+    ? (obj.roll as Exclude<RollKind, 'unset'>)
+    : undefined;
+  const templateFit = typeof obj.templateFit === 'boolean'
+    ? { fit: obj.templateFit, reason: typeof obj.templateReason === 'string' ? obj.templateReason.trim().slice(0, 20) : '' }
+    : undefined;
 
   const single = (field: 'shotSize' | 'cameraMove' | 'focalLength' | 'angle') => {
     const v = obj[field];
@@ -144,7 +167,44 @@ export function sanitizeAnnotation(raw: unknown): { annotation: ShotAnnotation; 
     }
   }
 
-  return { annotation: out, elements, confidence };
+  return { annotation: out, elements, confidence, roll, templateFit };
+}
+
+/**
+ * 把 AI 的判断并进镜头。硬规则：人标过的不动。
+ *   - 画面参数：annotationSource 是 manual / ai-edited 的字段跳过
+ *   - 归类：没标过（unset），或者上次也是 AI 标的，才改；老项目里人手标的归类没有来源记录，也当人标的
+ *   - 适不适合做模板：没判过或者上次是 AI 判的，才改
+ */
+export function mergeAiResult(shot: Shot, got: Sanitized): Shot {
+  const nextAnnotation: ShotAnnotation = { ...shot.annotation };
+  const nextSource = { ...shot.annotationSource };
+  const nextConfidence = { ...(shot.aiConfidence ?? {}) };
+  for (const [field, value] of Object.entries(got.annotation)) {
+    const key = field as keyof ShotAnnotation;
+    const src = nextSource[key];
+    if (src === 'manual' || src === 'ai-edited') continue;
+    (nextAnnotation[key] as unknown) = value;
+    nextSource[key] = 'ai';
+    const c = got.confidence[field];
+    if (typeof c === 'number') (nextConfidence[key] as number) = c;
+  }
+  const next: Shot = {
+    ...shot,
+    annotation: nextAnnotation,
+    annotationSource: nextSource,
+    aiConfidence: nextConfidence,
+    elements: shot.elements.length > 0 ? shot.elements : got.elements,
+  };
+  if (got.roll && (shot.roll === 'unset' || shot.rollSource === 'ai')) {
+    next.roll = got.roll;
+    next.rollSource = 'ai';
+  }
+  if (got.templateFit && (!shot.templateFit || shot.templateFit.source === 'ai')) {
+    const fit: TemplateFit = { ...got.templateFit, source: 'ai' };
+    next.templateFit = fit;
+  }
+  return next;
 }
 
 /** 从模型回复里抠出 JSON。模型常把 JSON 包在 ```json 围栏里，这里两种都能吃。 */
@@ -238,30 +298,7 @@ export async function autoAnnotate(
       const frames = await extractShotFrames(videoPath, shot, cfg);
       if (frames.length > 0) {
         const raw = await callVisionModel(frames, cfg);
-        const { annotation, elements, confidence } = sanitizeAnnotation(raw);
-
-        const nextAnnotation: ShotAnnotation = { ...shot.annotation };
-        const nextSource = { ...shot.annotationSource };
-        const nextConfidence = { ...(shot.aiConfidence ?? {}) };
-
-        for (const [field, value] of Object.entries(annotation)) {
-          const key = field as keyof ShotAnnotation;
-          // 人工填过的一律不动
-          const src = nextSource[key];
-          if (src === 'manual' || src === 'ai-edited') continue;
-          (nextAnnotation[key] as unknown) = value;
-          nextSource[key] = 'ai';
-          const c = confidence[field];
-          if (typeof c === 'number') (nextConfidence[key] as number) = c;
-        }
-
-        updated = {
-          ...shot,
-          annotation: nextAnnotation,
-          annotationSource: nextSource,
-          aiConfidence: nextConfidence,
-          elements: shot.elements.length > 0 ? shot.elements : elements,
-        };
+        updated = mergeAiResult(shot, sanitizeAnnotation(raw));
       }
       onProgress?.(++done, shots.length, shot.id);
     } catch (err) {

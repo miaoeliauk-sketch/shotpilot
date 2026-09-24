@@ -73,7 +73,7 @@
 | `analyze/ffmpeg.ts` | 二进制解析。会校验文件真实存在，因为 ffmpeg-static 的 postinstall 在代理环境常静默失败 |
 | `analyze/shots.ts` | 场景检测、镜头构建、补刀、合并、细切、标注迁移 |
 | `analyze/thumbnails.ts` | 缩略图。按起始时间命名，镜头重新编号时不用改文件 |
-| `analyze/vision.ts` | AI 初判。多帧送模型、输出过白名单校验 |
+| `analyze/vision.ts` | AI 初判：归类、适不适合做模板、景别运镜等。多帧送模型、输出过白名单校验；人标过的（含归类、适不适合做模板）不覆盖 |
 | `export/notes.ts` | Markdown 拉片笔记 |
 | `export/handoff.ts` | 给 AI 的结构化拉片数据 |
 | `export/replica.ts` | 复刻包：原片片段、逐帧序列、画面标注、给 agent 的指令 |

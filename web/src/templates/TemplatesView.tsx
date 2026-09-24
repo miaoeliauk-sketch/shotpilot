@@ -26,7 +26,10 @@ export function TemplatesView({ nav }: { nav: Nav }) {
   const { works, remove, confirmElement } = useWorks();
   const selected = TEMPLATES.find((t) => t.id === selectedId) ?? TEMPLATES[0];
 
-  const loadCandidates = () => api.replicaCandidates().then(setCandidates).catch(() => setCandidates([]));
+  // 适合做模板的排在前面：它们就是下一步要发给 Claude 的
+  const loadCandidates = () => api.replicaCandidates()
+    .then((rows) => setCandidates([...rows].sort((a, b) => Number(!!b.templateFit?.fit) - Number(!!a.templateFit?.fit))))
+    .catch(() => setCandidates([]));
   useEffect(() => { void loadCandidates(); }, []);
 
   const create = async (t: TemplateDef) => {
@@ -117,6 +120,7 @@ export function TemplatesView({ nav }: { nav: Nav }) {
                     {c.thumbnail ? <img className="row-thumb" src={thumbUrl(c.projectId, c.thumbnail)} alt="" /> : <span className="row-thumb" />}
                     <span className="dot" style={{ background: ROLL_COLORS[c.roll] }} />
                     <span className="row-title">{c.shotId} · {ROLL_NAMES[c.roll] ?? c.roll}</span>
+                    {c.templateFit?.fit && <span className="fit-chip" title={c.templateFit.reason || undefined}><Icon.templates size={11} />适合做模板</span>}
                     <span className="row-sub">{c.projectTitle} · {(c.end - c.start).toFixed(1)} 秒 · {fmtTime(c.start)}</span>
                     {c.exportedDir ? (
                       <button type="button" className="tool-btn" onClick={() => void api.reveal(c.exportedDir ?? undefined).catch((e: Error) => hud(e.message, 'error'))}>

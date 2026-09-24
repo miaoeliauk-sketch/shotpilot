@@ -40,6 +40,7 @@ export type ReplicaCandidate = {
   start: number;
   end: number;
   thumbnail?: string;
+  templateFit: { fit: boolean; reason: string; source: string } | null;
   exportedDir: string | null;
 };
 

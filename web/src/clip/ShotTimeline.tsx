@@ -67,6 +67,7 @@ export function ShotTimeline({ project, activeIndex, clock, playing, onSelect, o
         <span className="tl-title">时间轴</span>
         <div className="legend">
           {LEGEND.map((l) => <span key={l.label}><i style={{ background: l.color }} />{l.label}</span>)}
+          <span><b className="fit-mark"><Icon.templates size={9} /></b>适合做模板</span>
         </div>
         <div className="spacer" />
         <button type="button" className="tool-btn" onClick={onSplit} title="在播放头的位置把镜头切成两个（场景检测没切开的地方用它补）">
@@ -107,8 +108,8 @@ export function ShotTimeline({ project, activeIndex, clock, playing, onSelect, o
                     className={`shot-block${selected ? ' selected' : ''}`}
                     style={{ left: s.start * pxPerSec, width: w }}
                     aria-pressed={selected}
-                    aria-label={`镜头 ${i + 1}，${ROLL_NAMES[s.roll] ?? ''}，${(s.end - s.start).toFixed(1)} 秒${s.reviewed ? '，看完了' : ''}`}
-                    title={`${s.id} · ${ROLL_NAMES[s.roll] ?? ''} · ${(s.end - s.start).toFixed(1)} 秒`}
+                    aria-label={`镜头 ${i + 1}，${ROLL_NAMES[s.roll] ?? ''}，${(s.end - s.start).toFixed(1)} 秒${s.reviewed ? '，看完了' : ''}${s.templateFit?.fit ? '，适合做模板' : ''}`}
+                    title={`${s.id} · ${ROLL_NAMES[s.roll] ?? ''} · ${(s.end - s.start).toFixed(1)} 秒${s.templateFit?.fit ? ' · 适合做模板' : ''}`}
                     onClick={(e) => track.current && onSelect(i, timeAt(e, track.current, pxPerSec, duration))}
                   >
                     {s.thumbnail && <img src={thumbUrl(project.id, s.thumbnail)} alt="" loading="lazy" draggable={false} />}
@@ -120,6 +121,7 @@ export function ShotTimeline({ project, activeIndex, clock, playing, onSelect, o
                       </span>
                     )}
                     {s.reviewed && w > 28 && <span className="shot-check"><Icon.checkCircle size={13} /></span>}
+                    {s.templateFit?.fit && w > 18 && <span className="shot-fit" title="适合做模板"><Icon.templates size={11} /></span>}
                   </button>
                 );
               })}

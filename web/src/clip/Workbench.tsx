@@ -119,6 +119,15 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
   const updateLocal = (shotId: string, fn: (s: Shot) => Shot) =>
     setProject((p) => (p ? { ...p, shots: p.shots.map((s) => (s.id === shotId ? fn(s) : s)) } : p));
 
+  const setTemplateFit = (fit: boolean | null) => {
+    if (!active) return;
+    updateLocal(active.id, (s) => ({
+      ...s,
+      templateFit: fit === null ? undefined : { fit, reason: fit === s.templateFit?.fit ? s.templateFit.reason : '', source: 'manual' },
+    }));
+    void patchShot(active.id, { templateFit: fit === null ? null : { fit } });
+  };
+
   const setRoll = (roll: Shot['roll']) => {
     if (!active) return;
     updateLocal(active.id, (s) => ({ ...s, roll }));
@@ -244,14 +253,17 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
 
   // ── 导出 ────────────────────────────────────────────────────────────────
 
-  /** 导出复刻包。shotId 为 null 时导出所有 B-roll / 叠加层 / 字卡；完成后服务端在访达里打开 */
-  const exportReplica = async (shotId: string | null) => {
+  /**
+   * 导出复刻包。shotId 为 null 时导出所有 B-roll / 叠加层 / 字卡；fitOnly 时只导「适合做模板」的。
+   * 完成后服务端在访达里打开。
+   */
+  const exportReplica = async (shotId: string | null, fitOnly = false) => {
     flushSave();
     setExporting(shotId ? 'one' : 'all');
-    hud(shotId ? `正在导出 ${shotId} 的复刻包…` : '正在导出复刻包…');
+    hud(shotId ? `正在导出 ${shotId} 的复刻包…` : fitOnly ? '正在导出适合做模板的复刻包…' : '正在导出复刻包…');
     try {
       let failed = '';
-      await streamPost(`/api/projects/${projectId}/replica`, shotId ? { shotId } : {}, {
+      await streamPost(`/api/projects/${projectId}/replica`, shotId ? { shotId } : fitOnly ? { fit: true } : {}, {
         progress: (d: { done: number; total: number; shotId: string }) => { if (d.total > 1) hud(`导出中 ${d.done + 1} / ${d.total}：${d.shotId}`); },
         done: (d: { dirs: string[] }) => hud(`导出了 ${d.dirs.length} 个复刻包，已经在访达里打开`, 'success'),
         failed: (d: { message: string }) => { failed = d.message; },
@@ -276,7 +288,7 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
   const autoAnnotate = async () => {
     const ok = await confirm.ask({
       title: 'AI 初判',
-      message: 'AI 会看每个没看完的镜头，先帮你标上景别、运镜这些。会调用视觉模型，会产生费用。你手动改过的不会被覆盖。',
+      message: 'AI 会看每个还没看完的镜头：先分成 A-roll / B-roll / 叠加层 / 字卡，标出适不适合做模板，再标上景别、运镜这些。会调用看图 AI，按用量收费。你手动改过的不会被覆盖。',
       confirm: '开始',
     });
     if (!ok) return;
@@ -289,8 +301,10 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
         failed: (d: { message: string }) => { failed = d.message; },
       });
       if (failed) throw new Error(failed);
-      await load(active?.id);
-      hud('AI 初判完成，逐个看一下对不对', 'success');
+      const p = await load(active?.id);
+      const brolls = p.shots.filter((s) => s.roll === 'b-roll').length;
+      const fits = p.shots.filter((s) => s.templateFit?.fit).length;
+      hud(`AI 初判完成：B-roll ${brolls} 个，适合做模板 ${fits} 个。逐个看一眼对不对`, 'success');
     } catch (err) {
       hud(`AI 初判失败：${err instanceof Error ? err.message : err}`, 'error');
     } finally {
@@ -436,6 +450,7 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
   }
 
   const unsorted = shots.filter((s) => s.roll === 'unset').length;
+  const fitCount = shots.filter((s) => s.templateFit?.fit).length;
   const projectMenu: MenuItem[] = [
     { kind: 'header', label: '最近的项目' },
     ...others.slice(0, 12).map((p) => ({
@@ -450,10 +465,16 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
   const moreMenu: MenuItem[] = [
     { label: '重新切分…', icon: <Icon.refresh size={14} />, onSelect: () => setSheet({ kind: 'resplit' }) },
     {
-      label: visionConfigured ? 'AI 初判…' : 'AI 初判（没配置视觉模型）',
+      label: visionConfigured ? 'AI 初判（分 B-roll、找适合做模板的）…' : 'AI 初判（先在「设置」里填看图 AI）',
       icon: <Icon.sparkles size={14} />,
-      disabled: !visionConfigured || aiProgress !== null,
-      onSelect: () => void autoAnnotate(),
+      disabled: aiProgress !== null,
+      onSelect: () => (visionConfigured ? void autoAnnotate() : openSettings('vision')),
+    },
+    {
+      label: fitCount > 0 ? `只导出适合做模板的复刻包（${fitCount} 个）` : '只导出适合做模板的复刻包（还没有）',
+      icon: <Icon.templates size={14} />,
+      disabled: fitCount === 0 || exporting !== null,
+      onSelect: () => void exportReplica(null, true),
     },
     { kind: 'separator' },
     {
@@ -495,6 +516,7 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
             index={activeIndex}
             total={shots.length}
             onRoll={setRoll}
+            onTemplateFit={setTemplateFit}
             onAnnotate={setAnnotation}
             onText={queueText}
             onReview={toggleReview}

@@ -327,7 +327,7 @@ async function handleSettingsApi(req: IncomingMessage, res: ServerResponse, part
 
 /** 只允许改这些字段，防止前端随手把 id/start/end 覆盖掉造成数据错乱。 */
 const EDITABLE_SHOT_FIELDS = new Set([
-  'roll', 'annotation', 'effects', 'elements', 'note', 'brollContent', 'reviewed', 'library',
+  'roll', 'annotation', 'effects', 'elements', 'note', 'brollContent', 'reviewed', 'library', 'templateFit',
 ]);
 
 function applyShotPatch(shot: Shot, patch: Record<string, unknown>): Shot {
@@ -343,6 +343,22 @@ function applyShotPatch(shot: Shot, patch: Record<string, unknown>): Shot {
       for (const field of Object.keys(incoming)) {
         const prev = shot.annotationSource[field as keyof Shot['annotation']];
         source[field as keyof Shot['annotation']] = prev === 'ai' ? 'ai-edited' : 'manual';
+      }
+      continue;
+    }
+    if (key === 'roll') {
+      // 人改了归类就记下来，之后 AI 初判不会再改它
+      next.roll = value as Shot['roll'];
+      next.rollSource = shot.rollSource === 'ai' ? 'ai-edited' : 'manual';
+      continue;
+    }
+    if (key === 'templateFit') {
+      if (typeof value === 'object' && value !== null && typeof (value as { fit?: unknown }).fit === 'boolean') {
+        const fit = (value as { fit: boolean }).fit;
+        const reason = fit === shot.templateFit?.fit ? shot.templateFit.reason : '';
+        next.templateFit = { fit, reason, source: shot.templateFit?.source === 'ai' ? 'ai-edited' : 'manual' };
+      } else {
+        next.templateFit = undefined;
       }
       continue;
     }
@@ -400,7 +416,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     return true;
   }
 
-  // GET /api/replica-candidates —— 所有项目里标成 B-roll / 叠加层 / 字卡的镜头，以及复刻包导出过没有
+  // GET /api/replica-candidates —— 所有项目里标成 B-roll / 叠加层 / 字卡、或者「适合做模板」的镜头，以及复刻包导出过没有
   if (parts[1] === 'replica-candidates' && req.method === 'GET') {
     const outRoot = dataDir('replicaOut');
     const rows: unknown[] = [];
@@ -408,7 +424,8 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       let project: ReelProject;
       try { project = await loadProject(summary.id); } catch { continue; }
       for (const shot of project.shots) {
-        if (shot.roll !== 'b-roll' && shot.roll !== 'overlay' && shot.roll !== 'title') continue;
+        const fit = shot.templateFit?.fit === true;
+        if (!fit && shot.roll !== 'b-roll' && shot.roll !== 'overlay' && shot.roll !== 'title') continue;
         const dir = join(outRoot, replicaDirName(project, shot));
         rows.push({
           projectId: project.id,
@@ -419,6 +436,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
           start: shot.start,
           end: shot.end,
           thumbnail: shot.thumbnail,
+          templateFit: shot.templateFit ?? null,
           exportedDir: existsSync(dir) ? dir : null,
         });
       }
@@ -598,13 +616,18 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
   // POST /api/projects/:id/replica —— 在网页里导出复刻包，不用去终端
   if (parts[3] === 'replica' && req.method === 'POST') {
     const body = (await readBody(req)) as Record<string, unknown>;
+    // {shotId} 只导这一个；{fit: true} 只导「适合做模板」的；都不给就导所有 B-roll / 叠加层 / 字卡
     const targets = typeof body.shotId === 'string'
       ? project.shots.filter((s) => s.id === body.shotId)
-      : project.shots.filter((s) => s.roll === 'b-roll' || s.roll === 'overlay' || s.roll === 'title');
+      : body.fit === true
+        ? project.shots.filter((s) => s.templateFit?.fit)
+        : project.shots.filter((s) => s.roll === 'b-roll' || s.roll === 'overlay' || s.roll === 'title');
     if (targets.length === 0) {
       sendError(res, 400, typeof body.shotId === 'string'
         ? `镜头不存在：${body.shotId}`
-        : '还没有标为 B-roll / 叠加层 / 字卡的镜头。先按 X 或 V 标出要复刻的镜头。');
+        : body.fit === true
+          ? '还没有标成「适合做模板」的镜头。先在右上角「…」里点「AI 初判」，或者在右边手动标'
+          : '还没有标为 B-roll / 叠加层 / 字卡的镜头。先按 X 或 V 标出要复刻的镜头。');
       return true;
     }
     const outRoot = dataDir('replicaOut');
