@@ -86,13 +86,32 @@ jobs:
         continue-on-error: true
         run: desktop/gui-test.sh release/ShotPilot-darwin-arm64/ShotPilot.app smoke-out
 
-      - name: 做安装包（DMG）
+      - name: 做安装包（DMG，带「拖到这里」引导图）
         run: |
-          mkdir -p dmgroot
-          cp -R release/ShotPilot-darwin-arm64/ShotPilot.app dmgroot/
-          ln -s /Applications dmgroot/Applications
-          hdiutil create -volname ShotPilot -srcfolder dmgroot -ov -format UDZO release/ShotPilot.dmg
+          APP=release/ShotPilot-darwin-arm64/ShotPilot.app
+          tiffutil -cathidpicheck desktop/dmg-background.png desktop/dmg-background@2x.png -out dmg-background.tiff
+          python3 -m venv .dmg-venv && .dmg-venv/bin/pip install --quiet dmgbuild
+          if .dmg-venv/bin/dmgbuild -s desktop/dmg-settings.py -D app="$APP" -D background=dmg-background.tiff ShotPilot release/ShotPilot.dmg; then
+            echo "带引导图的安装包做好了"
+          else
+            echo "dmgbuild 失败，退回普通安装包"
+            rm -f release/ShotPilot.dmg
+            mkdir -p dmgroot
+            cp -R "$APP" dmgroot/
+            ln -s /Applications dmgroot/Applications
+            hdiutil create -volname ShotPilot -srcfolder dmgroot -ov -format UDZO release/ShotPilot.dmg
+          fi
           ls -la release/ShotPilot.dmg
+
+      - name: 检查安装包（挂载后软件在、签名完整）
+        run: |
+          hdiutil verify release/ShotPilot.dmg
+          MNT="$(mktemp -d)"
+          hdiutil attach -nobrowse -readonly -mountpoint "$MNT" release/ShotPilot.dmg
+          ls -la "$MNT"
+          codesign --verify --deep --strict "$MNT/ShotPilot.app"
+          test -L "$MNT/Applications"
+          hdiutil detach "$MNT"
 
       - name: 上传测试结果
         if: always()
