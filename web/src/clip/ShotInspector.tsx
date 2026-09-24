@@ -8,6 +8,9 @@ import { Button, Disclosure, FormRow, Kbd, Segmented, Tokens, useFieldId } from 
 import { Icon } from '../ui/icons';
 import { Inspector } from '../ui/layout';
 import { PopupButton } from '../ui/menu';
+import { LibraryPanel } from './LibraryPanel';
+import type { LibraryTags } from '../../../src/core/types';
+import type { ReelProject } from '../api';
 
 /**
  * 右边的镜头参数：归类、景别、运镜、构图，更多标注收起来，最下面导出复刻包。
@@ -38,7 +41,20 @@ export function draftToPatch(d: TextDraft) {
 const tip = (t: Term) => [t.hint, t.key ? `快捷键 ${t.key.toUpperCase()}` : ''].filter(Boolean).join(' · ') || undefined;
 const popupOptions = (terms: readonly Term[]) => terms.map((t) => ({ value: t.value, label: t.label, shortcut: t.key?.toUpperCase() }));
 
-export function ShotInspector({ shot, index, total, onRoll, onAnnotate, onText, onReview, onExport, exporting }: {
+export type InspectorTab = 'shot' | 'library';
+
+export type LibraryProps = {
+  project: ReelProject;
+  onChange: (shotId: string, lib: LibraryTags, textual: boolean) => void;
+  onAutoTag: () => void;
+  onSend: () => void;
+  tagging: boolean;
+  sending: boolean;
+  visionConfigured: boolean;
+  onSetupVision: () => void;
+};
+
+export function ShotInspector({ shot, index, total, onRoll, onAnnotate, onText, onReview, onExport, exporting, tab, onTab, library }: {
   shot: Shot;
   index: number;
   total: number;
@@ -48,6 +64,9 @@ export function ShotInspector({ shot, index, total, onRoll, onAnnotate, onText, 
   onReview: () => void;
   onExport: () => void;
   exporting: boolean;
+  tab: InspectorTab;
+  onTab: (t: InspectorTab) => void;
+  library: LibraryProps;
 }) {
   // 文本框草稿跟着镜头走：换了镜头才重置，保存回来的结果不去打断正在打的字
   const [draft, setDraft] = useState<TextDraft>(() => draftOf(shot));
@@ -72,6 +91,15 @@ export function ShotInspector({ shot, index, total, onRoll, onAnnotate, onText, 
     onAnnotate(field, list.size ? [...list] : null);
   };
   const moreCount = [a.focalLength, a.angle, a.transitionIn, a.brollNeed].filter(Boolean).length + (a.lighting?.length ?? 0);
+  // 素材标签只给 B-roll 打（用户定的），别的镜头不显示分页
+  const isBroll = shot.roll === 'b-roll';
+  const showLibrary = isBroll && tab === 'library';
+  const sentBefore = !!shot.eagle && Math.abs(shot.eagle.start - shot.start) < 1e-3 && Math.abs(shot.eagle.end - shot.end) < 1e-3;
+  const reviewButton = (
+    <Button size="large" block onClick={onReview}>
+      {shot.reviewed ? '标成没看完' : <>看完了，下一个 <Kbd>⏎</Kbd></>}
+    </Button>
+  );
 
   return (
     <Inspector
@@ -79,17 +107,41 @@ export function ShotInspector({ shot, index, total, onRoll, onAnnotate, onText, 
       title={`镜头 ${shot.id}`}
       subtitle={<><span className="mono">{fmtTime(shot.start)} – {fmtTime(shot.end)} · {(shot.end - shot.start).toFixed(1)} 秒</span> · 第 {index + 1} / {total} 个</>}
       aside={shot.reviewed ? <span className="reviewed-badge"><Icon.checkCircle size={14} />看完了</span> : null}
-      footer={(
+      tabs={isBroll ? (
+        <Segmented
+          label="右边显示"
+          value={tab}
+          onChange={(v) => v && onTab(v)}
+          options={[{ value: 'shot', label: '拉片标注' }, { value: 'library', label: '素材标签' }]}
+        />
+      ) : undefined}
+      footer={showLibrary ? (
+        <>
+          <Button variant="primary" size="large" block disabled={library.sending} onClick={library.onSend}>
+            <Icon.folder size={15} />{library.sending ? '正在放进 Eagle…' : sentBefore ? '更新 Eagle 里的这条' : '放进 Eagle'}
+          </Button>
+          {reviewButton}
+        </>
+      ) : (
         <>
           <Button variant="primary" size="large" block disabled={exporting} onClick={onExport}>
             <Icon.share size={15} />{exporting ? '正在导出…' : '导出这个镜头的复刻包'}
           </Button>
-          <Button size="large" block onClick={onReview}>
-            {shot.reviewed ? '标成没看完' : <>看完了，下一个 <Kbd>⏎</Kbd></>}
-          </Button>
+          {reviewButton}
         </>
       )}
     >
+      {showLibrary ? (
+        <LibraryPanel
+          project={library.project}
+          shot={shot}
+          onChange={(lib, textual) => library.onChange(shot.id, lib, textual)}
+          onAutoTag={library.onAutoTag}
+          tagging={library.tagging}
+          visionConfigured={library.visionConfigured}
+          onSetupVision={library.onSetupVision}
+        />
+      ) : (<>
       <FormRow label="镜头归类">
         <Segmented
           label="镜头归类"
@@ -147,6 +199,7 @@ export function ShotInspector({ shot, index, total, onRoll, onAnnotate, onText, 
       <FormRow label="备注" htmlFor={noteId}>
         <textarea id={noteId} className="field" rows={3} placeholder="为什么这么拍？学到了什么？" value={draft.note} onChange={(e) => edit({ note: e.target.value })} />
       </FormRow>
+      </>)}
     </Inspector>
   );
 }

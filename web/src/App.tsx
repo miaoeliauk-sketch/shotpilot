@@ -5,6 +5,7 @@ import { HudHost, hud } from './ui/overlay';
 import { ClipView } from './clip/ClipView';
 import { TemplatesView } from './templates/TemplatesView';
 import { WorksView } from './works/WorksView';
+import { SettingsSheet } from './settings/SettingsSheet';
 
 /**
  * 整个窗口：左边一条工具栏（拉片 / 模板 / 作品），右边是当前页面。
@@ -45,6 +46,7 @@ const RAIL: { view: Route['view']; label: string; icon: React.ReactNode }[] = [
 export function App() {
   const [route, setRoute] = useState<Route>(() => parseRoute(location.search));
   const [visionConfigured, setVisionConfigured] = useState(false);
+  const [settings, setSettings] = useState<null | { focus?: 'vision' | 'eagle' }>(null);
   // 每个页面上次停在哪：从模板切回拉片，还是刚才打开的那个项目
   const last = useRef<Partial<Record<Route['view'], Route>>>({});
 
@@ -59,6 +61,9 @@ export function App() {
   useEffect(() => {
     api.health().then((h) => { if (!h.ok) hud(h.message, 'error'); }).catch(() => hud('连不上工作台服务，请重新打开软件', 'error'));
     api.vocabulary().then((v) => setVisionConfigured(v.visionConfigured)).catch(() => undefined);
+    const open = (e: Event) => setSettings({ focus: (e as CustomEvent).detail });
+    window.addEventListener('shotpilot:open-settings', open);
+    return () => window.removeEventListener('shotpilot:open-settings', open);
   }, []);
 
   const go = (view: Route['view']) => {
@@ -98,6 +103,10 @@ export function App() {
           <Icon.folder size={22} />
           <span>文件夹</span>
         </button>
+        <button type="button" className="rail-item" onClick={() => setSettings({})}>
+          <Icon.gear size={22} />
+          <span>设置</span>
+        </button>
       </nav>
       <main className="main">
         {route.view === 'clip' && <ClipView key={route.projectId ?? 'library'} route={route} nav={nav} visionConfigured={visionConfigured} />}
@@ -105,6 +114,15 @@ export function App() {
         {route.view === 'works' && <WorksView key={route.workId ?? 'library'} route={route} nav={nav} />}
       </main>
       <HudHost />
+      {settings && (
+        <SettingsSheet
+          focus={settings.focus}
+          onClose={(changed) => {
+            setSettings(null);
+            if (changed) api.vocabulary().then((v) => setVisionConfigured(v.visionConfigured)).catch(() => undefined);
+          }}
+        />
+      )}
     </div>
   );
 }

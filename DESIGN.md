@@ -84,5 +84,9 @@
 | `templates/src/` | 模板组件 + 简单参数/中文表单/换算，`registry.ts` 统一登记 |
 | `web/src/` | 整个界面（React + Remotion 播放器），打包成 `web/js/app.js`。照 macOS 的样子：左边工具栏、中间预览、右边参数、底下时间轴。`ui/` 是按钮、菜单、弹出面板这些基础控件；`clip/` 拉片；`templates/` 选模板；`works/` 作品和模板编辑 |
 | `templates/src/*/params.ts` 的 `timeline` | 模板编辑器底部时间轴：怎么从参数画出色块、拖完怎么换算回参数（纯函数，有测试） |
+| `core/library.ts` | B-roll 素材标签：用户的打标模板、文件名公式、Eagle 标签和注释（纯函数，界面预览和放进 Eagle 用同一套） |
+| `analyze/library-tagger.ts` | AI 看画面打素材标签。关系、身份、具体事件不问 AI，永远等人确认 |
+| `export/eagle.ts` | 放进 Eagle（本机接口 localhost:41595）：建文件夹、放片段、再放一次是更新，只换自己打的标签 |
+| `core/settings.ts` | 设置（看图 AI 的 Key、Eagle 令牌），存在「ShotPilot」文件夹里 |
 | `desktop/` | Mac 软件：主程序、打包脚本、冒烟测试 |
 | `server/` | 本地 HTTP。**必须支持 Range**，否则时间线拖拽不可用 |

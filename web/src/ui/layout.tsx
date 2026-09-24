@@ -21,13 +21,15 @@ export function Workspace({ children, inspector, bottom }: { children: React.Rea
   );
 }
 
-export function Inspector({ label, title, subtitle, children, footer, aside }: {
+export function Inspector({ label, title, subtitle, children, footer, aside, tabs }: {
   label: string;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   aside?: React.ReactNode;
+  /** 标题下面的分页（比如「拉片标注 / 素材标签」），不跟着内容滚动 */
+  tabs?: React.ReactNode;
 }) {
   return (
     <aside className="inspector" aria-label={label}>
@@ -37,6 +39,7 @@ export function Inspector({ label, title, subtitle, children, footer, aside }: {
           {aside}
         </div>
         {subtitle && <div className="inspector-sub">{subtitle}</div>}
+        {tabs && <div className="inspector-tabs">{tabs}</div>}
       </div>
       <div className="inspector-body">{children}</div>
       {footer && <div className="inspector-foot">{footer}</div>}

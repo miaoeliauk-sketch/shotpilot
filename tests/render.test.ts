@@ -52,7 +52,7 @@ describe('数据文件夹', () => {
     process.env.SHOTPILOT_DATA = dir;
     delete process.env.SHOTPILOT_PROJECTS;
     ensureAppDataDirs();
-    expect(readdirSync(dir).sort()).toEqual(['下载的视频', '复刻包', '我的作品', '导出的视频', '拉片项目', '素材'].sort());
+    expect(readdirSync(dir).sort()).toEqual(['B-roll 素材', '下载的视频', '复刻包', '我的作品', '导出的视频', '拉片项目', '素材'].sort());
     rmSync(dir, { recursive: true, force: true });
   });
 

@@ -147,7 +147,7 @@ export function emptyShot(index: number, start: number, end: number): Shot {
  */
 export function carryOverAnnotations(oldShots: Shot[], newShots: Shot[]): Shot[] {
   const annotated = oldShots.filter(
-    (s) => s.reviewed || s.note || s.roll !== 'unset' ||
+    (s) => s.reviewed || s.note || s.roll !== 'unset' || !!s.library ||
       s.effects.length > 0 || s.elements.length > 0 ||
       Object.keys(s.annotation).length > 0,
   );
@@ -176,6 +176,7 @@ export function carryOverAnnotations(oldShots: Shot[], newShots: Shot[]): Shot[]
       note: best.note,
       brollContent: best.brollContent,
       reviewed: best.reviewed,
+      library: best.library ? { ...best.library, uses: [...best.library.uses] } : undefined,
     };
   });
 }

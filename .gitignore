@@ -12,6 +12,8 @@ dist/
 /works/
 /assets/
 /renders/
+/broll-clips/
+/settings.json
 # 构建产物
 web/js/
 # Mac 软件打包的中间产物

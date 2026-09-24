@@ -10,7 +10,9 @@ import { MenuButton, type MenuItem } from '../ui/menu';
 import { Sheet, hud, useConfirm } from '../ui/overlay';
 import { inKeyTrap, isTyping, physicalKey } from './keys';
 import { NewProjectSheet } from './NewProjectSheet';
-import { ROLL_COLORS, ShotInspector, draftToPatch, type AnnotationField, type TextDraft } from './ShotInspector';
+import { ROLL_COLORS, ShotInspector, draftToPatch, type AnnotationField, type InspectorTab, type TextDraft } from './ShotInspector';
+import type { LibraryTags } from '../../../src/core/types';
+import { openSettings } from '../settings/SettingsSheet';
 import { ShotTimeline } from './ShotTimeline';
 
 /**
@@ -37,6 +39,9 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
   const [sheet, setSheet] = useState<SheetState>(null);
   const [others, setOthers] = useState<ProjectSummary[]>([]);
   const [videoError, setVideoError] = useState<null | 'missing' | 'format'>(null);
+  const [tab, setTab] = useState<InspectorTab>('shot');
+  const [tagging, setTagging] = useState<string | null>(null);
+  const [sending, setSending] = useState<string | null>(null);
   const video = useRef<HTMLVideoElement>(null);
   const clock = useMemo(() => createClock(0), []);
   const confirm = useConfirm();
@@ -77,22 +82,37 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
    * 打完字 0.6 秒内切了镜头，旧镜头的备注照样存到旧镜头上，不会丢、不会串。
    */
   const pending = useRef<{ shotId: string; draft: TextDraft } | null>(null);
+  const pendingLib = useRef<{ shotId: string; lib: LibraryTags } | null>(null);
   const timer = useRef<number | undefined>(undefined);
-  const flushSave = useCallback(() => {
+  const flushSave = useCallback(async () => {
     window.clearTimeout(timer.current);
     const p = pending.current;
+    const l = pendingLib.current;
     pending.current = null;
-    if (p) void patchShot(p.shotId, draftToPatch(p.draft));
+    pendingLib.current = null;
+    await Promise.all([
+      p ? patchShot(p.shotId, draftToPatch(p.draft)) : undefined,
+      l ? patchShot(l.shotId, { library: l.lib }) : undefined,
+    ]);
   }, [patchShot]);
+  /** 素材标签：点选的马上存，打字的攒 0.6 秒再存（和备注一样按镜头锁定） */
+  const queueLibrary = useCallback((shotId: string, lib: LibraryTags, textual: boolean) => {
+    if (pendingLib.current && pendingLib.current.shotId !== shotId) void flushSave();
+    pendingLib.current = { shotId, lib };
+    window.clearTimeout(timer.current);
+    if (textual) timer.current = window.setTimeout(() => void flushSave(), 600);
+    else void flushSave();
+  }, [flushSave]);
   const queueText = useCallback((shotId: string, draft: TextDraft) => {
-    if (pending.current && pending.current.shotId !== shotId) flushSave();
+    if (pending.current && pending.current.shotId !== shotId) void flushSave();
     pending.current = { shotId, draft };
     window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(flushSave, 600);
+    timer.current = window.setTimeout(() => void flushSave(), 600);
   }, [flushSave]);
   useEffect(() => {
-    window.addEventListener('beforeunload', flushSave);
-    return () => { window.removeEventListener('beforeunload', flushSave); flushSave(); };
+    const before = () => { void flushSave(); };
+    window.addEventListener('beforeunload', before);
+    return () => { window.removeEventListener('beforeunload', before); void flushSave(); };
   }, [flushSave]);
 
   /** 先改界面再存（点选标注要跟手） */
@@ -278,6 +298,59 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
     }
   };
 
+  // ── 素材库（B-roll → Eagle）──────────────────────────────────────────
+
+  /** AI 打素材标签。shotId 为 null 时打所有还没打过的 B-roll */
+  const autoTag = async (shotId: string | null) => {
+    await flushSave();
+    setTagging(shotId ?? 'all');
+    try {
+      let failed = '';
+      let result: { tagged: number; errors: string[] } | null = null;
+      await streamPost(`/api/projects/${projectId}/library/autotag`, shotId ? { shotId } : {}, {
+        progress: (d: { done: number; total: number; shotId: string }) => { if (d.total > 1) hud(`AI 打标 ${d.done + 1} / ${d.total}：${d.shotId}`); },
+        done: (d: { tagged: number; errors: string[] }) => { result = d; },
+        failed: (d: { message: string }) => { failed = d.message; },
+      });
+      if (failed) throw new Error(failed);
+      await load(active?.id);
+      const r = result as { tagged: number; errors: string[] } | null;
+      if (r && r.errors.length > 0) hud(`打好了 ${r.tagged} 个，${r.errors.length} 个没打成：${r.errors[0]}`, 'error');
+      else hud(shotId ? 'AI 打好标签了，看一眼对不对' : `AI 打好了 ${r?.tagged ?? 0} 个 B-roll，逐个看一眼`, 'success');
+    } catch (err) {
+      hud(`AI 打标失败：${err instanceof Error ? err.message : err}`, 'error');
+    } finally {
+      setTagging(null);
+    }
+  };
+
+  /** 放进 Eagle。shotId 为 null 时放所有打过标的 B-roll */
+  const sendEagle = async (shotId: string | null) => {
+    await flushSave();
+    setSending(shotId ?? 'all');
+    try {
+      let failed: { message: string; code?: string } | null = null;
+      let result: { added: number; updated: number; skipped: number } | null = null;
+      await streamPost(`/api/projects/${projectId}/eagle`, shotId ? { shotId } : {}, {
+        progress: (d: { done: number; total: number; shotId: string }) => { if (d.total > 1) hud(`放进 Eagle ${d.done + 1} / ${d.total}：${d.shotId}`); },
+        done: (d: { added: number; updated: number; skipped: number }) => { result = d; },
+        failed: (d: { message: string; code?: string }) => { failed = d; },
+      });
+      const f = failed as { message: string; code?: string } | null;
+      if (f) throw Object.assign(new Error(f.message), { code: f.code });
+      await load(active?.id);
+      const r = result as { added: number; updated: number; skipped: number } | null;
+      const parts = [r?.added ? `新放进 ${r.added} 个` : '', r?.updated ? `更新了 ${r.updated} 个` : ''].filter(Boolean).join('，');
+      hud(`${parts || '完成'}，在 Eagle 的「ShotPilot 素材库」里${r?.skipped ? `（${r.skipped} 个 B-roll 还没打标，没放）` : ''}`, 'success');
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      hud(err instanceof Error ? err.message : String(err), 'error');
+      if (code === 'token') openSettings('eagle');
+    } finally {
+      setSending(null);
+    }
+  };
+
   const toggleReview = () => {
     if (!active) return;
     const reviewed = !active.reviewed;
@@ -383,6 +456,14 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
       onSelect: () => void autoAnnotate(),
     },
     { kind: 'separator' },
+    {
+      label: visionConfigured ? 'AI 给还没打标的 B-roll 打标…' : 'AI 给 B-roll 打标（先去设置里填 Key）',
+      icon: <Icon.tag size={14} />,
+      disabled: tagging !== null,
+      onSelect: () => (visionConfigured ? void autoTag(null) : openSettings('vision')),
+    },
+    { label: '把打过标的 B-roll 都放进 Eagle', icon: <Icon.folder size={14} />, disabled: sending !== null, onSelect: () => void sendEagle(null) },
+    { kind: 'separator' },
     { label: '导出拉片笔记（Markdown）', icon: <Icon.doc size={14} />, onSelect: () => download('md') },
     { label: '导出拉片数据（JSON）', icon: <Icon.doc size={14} />, onSelect: () => download('json') },
   ];
@@ -419,6 +500,18 @@ export function Workbench({ projectId, initialShot, nav, visionConfigured }: {
             onReview={toggleReview}
             onExport={() => void exportReplica(active.id)}
             exporting={exporting !== null}
+            tab={tab}
+            onTab={setTab}
+            library={{
+              project,
+              onChange: queueLibrary,
+              onAutoTag: () => void autoTag(active.id),
+              onSend: () => void sendEagle(active.id),
+              tagging: tagging !== null,
+              sending: sending !== null,
+              visionConfigured,
+              onSetupVision: () => openSettings('vision'),
+            }}
           />
         ) : undefined}
         bottom={(

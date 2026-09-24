@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FFMPEG, run } from './ffmpeg.js';
 import { isValidTerm } from '../core/vocabulary.js';
+import { loadSettings } from '../core/settings.js';
 import type { Shot, ShotAnnotation } from '../core/types.js';
 
 /**
@@ -42,6 +43,17 @@ export function visionConfigFromEnv(): VisionConfig | null {
   };
 }
 
+/**
+ * 当前能用的看图模型：界面「设置」里填的优先（Mac 软件里只能这样填），没填就看环境变量。
+ */
+export async function visionConfig(): Promise<VisionConfig | null> {
+  const v = (await loadSettings()).vision;
+  if (v?.apiKey && v.baseUrl && v.model) {
+    return { baseUrl: v.baseUrl.replace(/\/+$/, ''), apiKey: v.apiKey, model: v.model, framesPerShot: 3, frameWidth: 512, timeoutMs: 120_000 };
+  }
+  return visionConfigFromEnv();
+}
+
 const SYSTEM_PROMPT = `你是影视摄影分析助手。用户会给你同一个镜头里按时间顺序抽取的若干帧。
 请判断这个镜头的摄影参数，只返回 JSON，不要任何解释文字。
 
@@ -66,7 +78,7 @@ interface ChatResponse {
 }
 
 /** 从镜头里均匀抽帧并转成 base64 data URL */
-async function extractShotFrames(
+export async function extractShotFrames(
   videoPath: string,
   shot: Shot,
   cfg: VisionConfig,
@@ -145,21 +157,33 @@ export function extractJson(content: string): unknown {
   return JSON.parse(candidate.slice(start, end + 1));
 }
 
-async function callVisionModel(frames: string[], cfg: VisionConfig): Promise<unknown> {
+function callVisionModel(frames: string[], cfg: VisionConfig): Promise<unknown> {
+  return chatJson(cfg, SYSTEM_PROMPT, `这是同一个镜头按时间顺序的 ${frames.length} 帧，请分析。`, frames, 500);
+}
+
+/** 发一段提示词加几张图给看图模型，把回复里的 JSON 抠出来。其他 AI 功能（素材库打标）也走这里 */
+export async function chatJson(cfg: VisionConfig, system: string, userText: string, frames: string[], maxTokens: number): Promise<unknown> {
+  const content = await chat(cfg, system, [
+    { type: 'text', text: userText },
+    ...frames.map((url) => ({ type: 'image_url', image_url: { url } })),
+  ], maxTokens);
+  return extractJson(content);
+}
+
+/** 测一下 Key 和模型名填得对不对：发一句话，不带图，花费几乎为零 */
+export async function testVision(cfg: VisionConfig): Promise<void> {
+  await chat({ ...cfg, timeoutMs: 30_000 }, '只回复 OK 两个字母。', [{ type: 'text', text: 'ping' }], 5);
+}
+
+async function chat(cfg: VisionConfig, system: string, userContent: unknown[], maxTokens: number): Promise<string> {
   const body = {
     model: cfg.model,
     messages: [
-      { role: 'system', content: SYSTEM_PROMPT },
-      {
-        role: 'user',
-        content: [
-          { type: 'text', text: `这是同一个镜头按时间顺序的 ${frames.length} 帧，请分析。` },
-          ...frames.map((url) => ({ type: 'image_url', image_url: { url } })),
-        ],
-      },
+      { role: 'system', content: system },
+      { role: 'user', content: userContent },
     ],
     temperature: 0,
-    max_tokens: 500,
+    max_tokens: maxTokens,
   };
 
   const controller = new AbortController();
@@ -171,11 +195,21 @@ async function callVisionModel(frames: string[], cfg: VisionConfig): Promise<unk
       body: JSON.stringify(body),
       signal: controller.signal,
     });
-    const data = (await res.json()) as ChatResponse;
-    if (!res.ok) throw new Error(`视觉模型返回 ${res.status}：${data.error?.message ?? '未知错误'}`);
+    const text = await res.text();
+    let data: ChatResponse = {};
+    try { data = JSON.parse(text) as ChatResponse; } catch { /* 不是 JSON，下面按错误处理 */ }
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) throw new Error(`看图 AI 不认这个 Key（${res.status}）：${data.error?.message ?? '检查一下 Key 有没有复制全'}`);
+      if (res.status === 404) throw new Error(`看图 AI 的地址或模型名不对（404）：${data.error?.message ?? text.slice(0, 120)}`);
+      throw new Error(`看图 AI 返回 ${res.status}：${data.error?.message ?? text.slice(0, 160)}`);
+    }
     const content = data.choices?.[0]?.message?.content;
-    if (typeof content !== 'string') throw new Error('视觉模型回复为空');
-    return extractJson(content);
+    if (typeof content !== 'string') throw new Error('看图 AI 的回复是空的');
+    return content;
+  } catch (err) {
+    if (err instanceof Error && err.name === 'AbortError') throw new Error('看图 AI 太久没回复，稍后再试');
+    if (err instanceof TypeError) throw new Error(`连不上看图 AI（${cfg.baseUrl}）：检查地址和网络`);
+    throw err;
   } finally {
     clearTimeout(timer);
   }

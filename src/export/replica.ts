@@ -56,8 +56,11 @@ async function extractFrameSequence(
   return Math.max(1, Math.round(duration * opts.fps));
 }
 
-/** 裁出原片这一段。渲染比对的基准，没有它整个迭代闭环就断了。 */
-async function extractClip(videoPath: string, shot: Shot, outPath: string, sourceFps: number): Promise<void> {
+/**
+ * 裁出原片这一段（只有画面）。渲染比对的基准，没有它整个迭代闭环就断了。
+ * 放进 Eagle 的素材也用它剪。
+ */
+export async function extractClip(videoPath: string, shot: Shot, outPath: string, sourceFps: number): Promise<void> {
   await runOrThrow(FFMPEG, [
     '-hide_banner', '-nostats', '-loglevel', 'error',
     '-ss', shot.start.toFixed(3),

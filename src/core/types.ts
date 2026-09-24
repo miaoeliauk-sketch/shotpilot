@@ -97,12 +97,52 @@ export interface Shot {
   slots?: Slot[];
   /** 这个镜头是否要复刻。挑出来做复刻包时用它筛选。 */
   replicate?: boolean;
+  /** 素材库标签（B-roll 放进 Eagle 用），格式见 core/library.ts */
+  library?: LibraryTags;
+  /** 放进 Eagle 的记录。镜头边界变了（补刀、合并）就对不上了，要重新放 */
+  eagle?: EagleRecord;
+}
+
+/**
+ * 素材库标签，照用户给的「实拍素材打标」模板：
+ * 画面类型、场景倾向、基调、可用途由 AI 看画面判断（人可以改）；
+ * 关系、身份、具体事件 AI 一律不碰，默认「待人工确认」，只有人手动改。
+ */
+export interface LibraryTags {
+  frameType?: string;
+  scene?: string;
+  tone?: string;
+  uses: string[];
+  /** 文件名里「场景大类-子场景」的子场景，比如 讲台、机场 */
+  subScene: string;
+  /** 文件名里的一句话描述 */
+  summary: string;
+  /** 客观画面描述 + 建议可用途 */
+  note: string;
+  relation: string;
+  identity: string;
+  event: string;
+  /** AI 的把握度：高 / 中 / 低 */
+  confidence?: string;
+  /** 谁填的：AI 打的、AI 打完人改过、人工填的 */
+  source?: 'ai' | 'ai-edited' | 'manual';
+  taggedAt?: string;
+}
+
+export interface EagleRecord {
+  itemId?: string;
+  name: string;
+  sentAt: string;
+  start: number;
+  end: number;
 }
 
 export interface ReelProject {
   version: number;
   id: string;
   title: string;
+  /** 从链接下载的视频记下原链接，放进 Eagle 时填在「网址」里 */
+  sourceUrl?: string;
   source: SourceMedia;
   shots: Shot[];
   /** 整片级别的备注 */

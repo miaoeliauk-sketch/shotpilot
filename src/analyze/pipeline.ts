@@ -7,6 +7,8 @@ import type { ReelProject } from '../core/types.js';
 
 export interface AnalyzeOptions {
   title?: string;
+  /** 从链接下载的，记下原链接 */
+  sourceUrl?: string;
   threshold?: number;
   minShotDuration?: number;
 }
@@ -27,6 +29,7 @@ export async function analyzeVideo(
   onProgress('probe', '读取视频信息');
   const source = await probeMedia(videoPath);
   const project = createProject(source, opts.title);
+  if (opts.sourceUrl) project.sourceUrl = opts.sourceUrl;
   await mkdir(projectDir(project.id), { recursive: true });
 
   onProgress('cuts', '检测分镜切点');

@@ -26,6 +26,11 @@ export type Work = {
   lastRender?: string;
 };
 
+export type PublicSettings = {
+  vision: { baseUrl: string; model: string; hasKey: boolean; keyHint: string } | null;
+  eagle: { hasToken: boolean };
+};
+
 export type ReplicaCandidate = {
   projectId: string;
   projectTitle: string;
@@ -93,6 +98,12 @@ export const api = {
       body: file,
     }),
 
+  getSettings: () => request<PublicSettings>('/api/settings'),
+  saveSettings: (patch: { vision?: { baseUrl: string; apiKey: string; model: string }; eagle?: { token: string } }) =>
+    request<PublicSettings>('/api/settings', json('PUT', patch)),
+  testVision: () => request<{ ok: true; model: string }>('/api/settings/test-vision', { method: 'POST' }),
+  testEagle: () => request<{ ok: true; version: string }>('/api/settings/test-eagle', { method: 'POST' }),
+
   /** 在访达里显示。path 不填打开导出的视频文件夹；root 打开整个 ShotPilot 文件夹 */
   reveal: (path?: string) => request<{ ok: true }>('/api/reveal', json('POST', { path })),
   revealRoot: () => request<{ ok: true }>('/api/reveal', json('POST', { kind: 'root' })),
@@ -107,8 +118,13 @@ export async function streamPost(url: string, body: unknown, handlers: Record<st
   if (!res.ok || !res.body) {
     const text = await res.text();
     let message = text;
-    try { message = JSON.parse(text).error ?? text; } catch { /* 不是 JSON，原样显示 */ }
-    throw new Error(message || `请求失败：${res.status}`);
+    let code: string | undefined;
+    try {
+      const parsed = JSON.parse(text);
+      message = parsed.error ?? text;
+      code = parsed.code;
+    } catch { /* 不是 JSON，原样显示 */ }
+    throw Object.assign(new Error(message || `请求失败：${res.status}`), { code });
   }
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

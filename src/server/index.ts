@@ -10,7 +10,11 @@ import { downloadVideo, extractUrl } from '../analyze/fetch.js';
 import { buildReplicaPackage, replicaDirName } from '../export/replica.js';
 import { detectCuts, mergeWithPrevious, splitShot, splitShotByCuts } from '../analyze/shots.js';
 import { generateThumbnailFor, generateThumbnails } from '../analyze/thumbnails.js';
-import { autoAnnotate, visionConfigFromEnv } from '../analyze/vision.js';
+import { autoAnnotate, testVision, visionConfig } from '../analyze/vision.js';
+import { autoTagShot } from '../analyze/library-tagger.js';
+import { applyAiTags, applyManualEdit, isTagged } from '../core/library.js';
+import { loadSettings, publicSettings, saveSettings } from '../core/settings.js';
+import { DEFAULT_EAGLE_URL, EagleError, eagleInfo, sendShot, type EagleConn } from '../export/eagle.js';
 import { checkToolchain } from '../analyze/ffmpeg.js';
 import { listProjects, loadProject, saveProject, thumbsDir } from '../core/project.js';
 import { DIMENSIONS } from '../core/vocabulary.js';
@@ -277,9 +281,46 @@ async function handleTemplateApi(req: IncomingMessage, res: ServerResponse, part
   return false;
 }
 
+/** Eagle 连接：设置里填的令牌，地址默认 Eagle 的本机接口 */
+async function eagleConn(): Promise<EagleConn> {
+  const s = await loadSettings();
+  return { baseUrl: s.eagle?.baseUrl || process.env.SHOTPILOT_EAGLE_URL || DEFAULT_EAGLE_URL, token: s.eagle?.token };
+}
+
+/** 设置：看图 AI 的 Key、Eagle 令牌。Key 只进不出，界面上只看得到最后 4 位 */
+async function handleSettingsApi(req: IncomingMessage, res: ServerResponse, parts: string[]): Promise<boolean> {
+  if (parts[1] !== 'settings') return false;
+  try {
+    if (parts.length === 2 && req.method === 'GET') {
+      sendJson(res, 200, publicSettings(await loadSettings()));
+      return true;
+    }
+    if (parts.length === 2 && req.method === 'PUT') {
+      sendJson(res, 200, publicSettings(await saveSettings(await readBody(req))));
+      return true;
+    }
+    if (parts[2] === 'test-vision' && req.method === 'POST') {
+      const cfg = await visionConfig();
+      if (!cfg) { sendError(res, 400, '先填好地址、API Key 和模型名'); return true; }
+      await testVision(cfg);
+      sendJson(res, 200, { ok: true, model: cfg.model });
+      return true;
+    }
+    if (parts[2] === 'test-eagle' && req.method === 'POST') {
+      const info = await eagleInfo(await eagleConn());
+      sendJson(res, 200, { ok: true, version: info?.version ?? '' });
+      return true;
+    }
+  } catch (err) {
+    sendError(res, 400, err instanceof Error ? err.message : String(err));
+    return true;
+  }
+  return false;
+}
+
 /** 只允许改这些字段，防止前端随手把 id/start/end 覆盖掉造成数据错乱。 */
 const EDITABLE_SHOT_FIELDS = new Set([
-  'roll', 'annotation', 'effects', 'elements', 'note', 'brollContent', 'reviewed',
+  'roll', 'annotation', 'effects', 'elements', 'note', 'brollContent', 'reviewed', 'library',
 ]);
 
 function applyShotPatch(shot: Shot, patch: Record<string, unknown>): Shot {
@@ -296,6 +337,11 @@ function applyShotPatch(shot: Shot, patch: Record<string, unknown>): Shot {
         const prev = shot.annotationSource[field as keyof Shot['annotation']];
         source[field as keyof Shot['annotation']] = prev === 'ai' ? 'ai-edited' : 'manual';
       }
+      continue;
+    }
+    if (key === 'library') {
+      // 素材标签整组校验；人改过就记成「人工」或「AI 打完人改过」
+      next.library = applyManualEdit(shot.library, value);
       continue;
     }
     (next as unknown as Record<string, unknown>)[key] = value;
@@ -316,12 +362,13 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
   if (parts[1] === 'vocabulary') {
     sendJson(res, 200, {
       dimensions: DIMENSIONS,
-      visionConfigured: visionConfigFromEnv() !== null,
+      visionConfigured: (await visionConfig()) !== null,
     });
     return true;
   }
 
   if (await handleTemplateApi(req, res, parts)) return true;
+  if (await handleSettingsApi(req, res, parts)) return true;
 
   // POST /api/videos —— 把拖进窗口的视频存进「下载的视频」，返回路径，再走正常的新建拉片
   if (parts[1] === 'videos' && req.method === 'POST') {
@@ -413,6 +460,7 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
       }
       const project = await analyzeVideo(videoPath, {
         title,
+        sourceUrl: url ?? undefined,
         threshold: typeof body.threshold === 'number' ? body.threshold : undefined,
         minShotDuration: typeof body.minShotDuration === 'number' ? body.minShotDuration : undefined,
       }, (stage, detail) => emit('progress', { stage, detail }));
@@ -573,6 +621,85 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
     return true;
   }
 
+  // POST /api/projects/:id/library/autotag —— AI 给 B-roll 打素材标签。{shotId} 只打这一个；不给就打所有还没打过的
+  if (parts[3] === 'library' && parts[4] === 'autotag' && req.method === 'POST') {
+    const body = (await readBody(req)) as Record<string, unknown>;
+    const cfg = await visionConfig();
+    if (!cfg) { sendError(res, 400, '还没设置看图 AI。点左下角「设置」，填上 API Key。'); return true; }
+    const single = typeof body.shotId === 'string' ? body.shotId : null;
+    const targets = single
+      ? project.shots.filter((s) => s.id === single)
+      : project.shots.filter((s) => s.roll === 'b-roll' && !isTagged(s.library));
+    if (targets.length === 0) {
+      sendError(res, 400, single ? `镜头不存在：${single}` : '没有要打标的 B-roll：都打过了，或者还没有镜头标成 B-roll');
+      return true;
+    }
+    res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', connection: 'keep-alive' });
+    const emit = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    let tagged = 0;
+    const errors: string[] = [];
+    for (const [i, shot] of targets.entries()) {
+      emit('progress', { done: i, total: targets.length, shotId: shot.id });
+      try {
+        const raw = await autoTagShot(project.source.path, shot, cfg);
+        // 每打完一个就存一次，打到一半断了前面的也不白花钱
+        const fresh = await loadProject(id);
+        fresh.shots = fresh.shots.map((s) => (s.id === shot.id ? { ...s, library: applyAiTags(s.library, raw) } : s));
+        await saveProject(fresh);
+        tagged++;
+      } catch (err) {
+        errors.push(`${shot.id}：${err instanceof Error ? err.message : String(err)}`);
+        // Key 错、地址错这种每个镜头都会错，第一次就停下
+        if (/Key|地址|连不上/.test(String(err))) break;
+      }
+    }
+    if (tagged === 0 && errors.length > 0) emit('failed', { message: errors[0] });
+    else emit('done', { tagged, errors });
+    res.end();
+    return true;
+  }
+
+  // POST /api/projects/:id/eagle —— 把 B-roll 放进 Eagle。{shotId} 只放这一个；不给就放所有打过标的 B-roll
+  if (parts[3] === 'eagle' && req.method === 'POST') {
+    const body = (await readBody(req)) as Record<string, unknown>;
+    const single = typeof body.shotId === 'string' ? body.shotId : null;
+    const brolls = project.shots.filter((s) => s.roll === 'b-roll');
+    const targets = single ? project.shots.filter((s) => s.id === single) : brolls.filter((s) => isTagged(s.library));
+    if (targets.length === 0) {
+      sendError(res, 400, single
+        ? `镜头不存在：${single}`
+        : brolls.length === 0 ? '还没有镜头标成 B-roll' : 'B-roll 都还没打标。先点「AI 打标」，或者在右边手动选好标签');
+      return true;
+    }
+    const conn = await eagleConn();
+    try {
+      await eagleInfo(conn);
+    } catch (err) {
+      const e = err instanceof EagleError ? err : new EagleError('failed', String(err));
+      sendJson(res, 409, { error: e.message, code: e.code });
+      return true;
+    }
+    res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache', connection: 'keep-alive' });
+    const emit = (event: string, data: unknown) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    let added = 0;
+    let updated = 0;
+    try {
+      for (const [i, shot] of targets.entries()) {
+        emit('progress', { done: i, total: targets.length, shotId: shot.id });
+        const r = await sendShot(conn, project, shot, dataDir('brollClips'));
+        if (r.action === 'added') added++; else updated++;
+        const fresh = await loadProject(id);
+        fresh.shots = fresh.shots.map((s) => (s.id === shot.id ? { ...s, eagle: r.record } : s));
+        await saveProject(fresh);
+      }
+      emit('done', { added, updated, skipped: single ? 0 : brolls.length - targets.length });
+    } catch (err) {
+      emit('failed', { message: err instanceof Error ? err.message : String(err), code: err instanceof EagleError ? err.code : 'failed' });
+    }
+    res.end();
+    return true;
+  }
+
   // POST /api/projects/:id/resplit
   if (parts[3] === 'resplit' && req.method === 'POST') {
     const body = (await readBody(req)) as Record<string, unknown>;
@@ -590,9 +717,9 @@ async function handleApi(req: IncomingMessage, res: ServerResponse, url: URL): P
 
   // POST /api/projects/:id/autoannotate
   if (parts[3] === 'autoannotate' && req.method === 'POST') {
-    const cfg = visionConfigFromEnv();
+    const cfg = await visionConfig();
     if (!cfg) {
-      sendError(res, 400, '未配置视觉模型。请设置环境变量 SHOTPILOT_VISION_API_KEY（可选 _BASE_URL / _MODEL）后重启。');
+      sendError(res, 400, '还没设置看图 AI。点左下角「设置」，填上 API Key。');
       return true;
     }
     const body = (await readBody(req)) as Record<string, unknown>;
@@ -656,5 +783,5 @@ server.listen(PORT, '127.0.0.1', async () => {
   const health = await checkToolchain();
   console.log(`\n  ShotPilot 拉片工作台  →  http://127.0.0.1:${PORT}\n`);
   console.log(`  ${health.ok ? '✓' : '✗'} ${health.message}`);
-  console.log(`  ${visionConfigFromEnv() ? '✓ 视觉模型已配置（AI 自动标注可用）' : '· 未配置视觉模型，AI 自动标注不可用（设 SHOTPILOT_VISION_API_KEY 启用）'}\n`);
+  console.log(`  ${(await visionConfig()) ? '✓ 看图 AI 已设置（AI 初判、素材打标可用）' : '· 还没设置看图 AI（在界面「设置」里填 Key，或设 SHOTPILOT_VISION_API_KEY）'}\n`);
 });

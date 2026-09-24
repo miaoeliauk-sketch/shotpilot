@@ -1016,3 +1016,26 @@ textarea.field { height: auto; padding: 6px 8px; line-height: 1.5; resize: none;
   :root { --inspector-w: 300px; }
   .transport-hint:not(.typing), .legend { display: none; }
 }
+
+/* ───────────── 素材标签、设置 ───────────── */
+
+.inspector-tabs { margin-top: 12px; }
+.lib-ai { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; background: var(--fill-quiet); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.lib-ai-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lib-ai-status { font-size: 12px; color: var(--label-2); }
+.lib-name { display: flex; flex-direction: column; gap: 4px; }
+.lib-name-value { font: 12px/1.5 var(--mono); color: var(--label); word-break: break-all; user-select: text; -webkit-user-select: text; padding: 6px 8px; border-radius: 6px; background: var(--field); border: 1px solid var(--field-line); }
+.lib-confirm { display: flex; flex-direction: column; gap: 12px; padding-top: 12px; border-top: 1px solid var(--separator); }
+.lib-eagle { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; color: var(--label-2); line-height: 1.5; }
+.lib-eagle svg { flex-shrink: 0; margin-top: 2px; color: var(--accent); }
+
+.settings-section { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: 10px; background: rgba(0, 0, 0, 0.18); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.settings-section.focus { box-shadow: inset 0 0 0 2px var(--accent); }
+.settings-title { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; margin: 0; }
+.settings-title svg { color: var(--accent); }
+.small-text { font-size: 12px; }
+.settings-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.settings-msg { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; line-height: 1.5; }
+.settings-msg.ok { color: var(--green); }
+.settings-msg.bad { color: var(--red); }
+.settings-msg svg { flex-shrink: 0; }

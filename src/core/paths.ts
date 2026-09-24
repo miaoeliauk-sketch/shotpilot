@@ -9,9 +9,9 @@ import { join, resolve } from 'node:path';
  * 用户在访达里一眼能看懂哪个是哪个。单项仍可用各自的环境变量改到别处（比如外置硬盘）。
  */
 
-type Kind = 'projects' | 'downloads' | 'replicaOut' | 'works' | 'assets' | 'renders';
+type Kind = 'projects' | 'downloads' | 'replicaOut' | 'works' | 'assets' | 'renders' | 'brollClips';
 
-const KINDS: Kind[] = ['projects', 'downloads', 'replicaOut', 'works', 'assets', 'renders'];
+const KINDS: Kind[] = ['projects', 'downloads', 'replicaOut', 'works', 'assets', 'renders', 'brollClips'];
 
 const DEV_NAMES: Record<Kind, string> = {
   projects: 'projects',
@@ -20,6 +20,7 @@ const DEV_NAMES: Record<Kind, string> = {
   works: 'works',
   assets: 'assets',
   renders: 'renders',
+  brollClips: 'broll-clips',
 };
 
 const APP_NAMES: Record<Kind, string> = {
@@ -29,6 +30,7 @@ const APP_NAMES: Record<Kind, string> = {
   works: '我的作品',
   assets: '素材',
   renders: '导出的视频',
+  brollClips: 'B-roll 素材',
 };
 
 const OVERRIDES: Partial<Record<Kind, string>> = {
