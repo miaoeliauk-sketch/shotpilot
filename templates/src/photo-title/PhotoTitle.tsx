@@ -6,7 +6,7 @@ import { Media } from '../media';
  * 复刻：黑白照片 → 白光闪切 → 第二张照片上一组大字标题逐个出来（196 帧，1280×720 @30fps）
  *
  * ── 两段 ─────────────────────────────────────────────────────────────
- *   0–43   第一张照片，不动
+ *   0–46   第一张照片越推越快：到闪白时约 1.3 倍，推的中心在画面左边（x≈355），所以画面边放大边往右走（逐帧实测）
  *   43–50  亮的地方过曝、往外泛光（46、47 帧最亮，暗的地方还在），47 帧切到第二张
  *   47–      第二张照片、胶片边框、标题是一个整体，被同一个镜头拍：一开始推近到 1.46 倍、对着左上，
  *            越来越慢地拉远，120 帧回到 1 倍，之后轻微晃几像素（逐帧实测）。标题那层前 50 帧的中心略有不同
@@ -68,6 +68,16 @@ const TCAM_S = [1.35, 1.24, 1.19, 1.1614, 1.1292, 1.1081, 1.0866, 1.0693, 1.0557
 const TCAM_X = [556, 578, 588, 593.4, 599, 604.9, 609.1, 613.9, 617.9, 623.4, 628.5, 636.7, 642, 636.7, 634.8, 640];
 const TCAM_Y = [386, 376, 371, 368.9, 367.1, 367, 366, 366.3, 366.6, 367.2, 367.9, 369.5, 370, 363.3, 360.1, 360];
 /** 闪白强度（相对最亮那一帧） */
+/** 第一张照片的镜头（相对闪白那一帧；原片 0–43 帧实测，最后几帧按趋势外推） */
+const OPEN_T = [-46, -44, -40, -36, -33, -30, -27, -24, -21, -18, -15, -12, -9, -7, -5, -4, -3, -2, -1, 0];
+const OPEN_S = [1, 1.001, 1.0051, 1.0125, 1.0209, 1.0309, 1.0445, 1.0602, 1.0794, 1.1011, 1.129, 1.16, 1.1958, 1.2209, 1.2452, 1.2581, 1.2715, 1.2855, 1.3, 1.315];
+const OPEN_X = [640, 640.3, 641.4, 643.5, 645.9, 648.8, 652.6, 657.2, 662.6, 668.8, 676.5, 685.6, 696.1, 703.7, 712.2, 717, 722, 727, 732, 737];
+const OPEN_Y = [360, 360, 360, 360.1, 360.1, 360.1, 360.1, 360.1, 360.1, 360.1, 360.3, 360.1, 359, 357.8, 355.3, 353.6, 351.8, 350, 348.3, 346.6];
+
+export function openCamera(rel: number) {
+  return { s: interpolate(rel, OPEN_T, OPEN_S, clamp), x: interpolate(rel, OPEN_T, OPEN_X, clamp), y: interpolate(rel, OPEN_T, OPEN_Y, clamp) };
+}
+
 const FLASH_T = [-3, -2, -1, 0, 1, 2, 3, 4, 6];
 const FLASH_V = [0, 0.3, 0.75, 1, 1, 0.85, 0.3, 0.08, 0];
 
@@ -107,7 +117,10 @@ export const PhotoTitle: React.FC<PhotoTitleProps> = (p) => {
   return (
     <AbsoluteFill style={{ backgroundColor: '#111', overflow: 'hidden' }}>
       {frame < cut ? (
-        picture
+        // 推近的同时越来越虚一点（糊放在外层，免得先糊再放大）
+        <AbsoluteFill style={{ filter: frame - p.flashAt > -26 ? `blur(${interpolate(frame - p.flashAt, [-26, -3], [0, 1.2], clamp).toFixed(2)}px)` : undefined }}>
+          <AbsoluteFill style={{ transformOrigin: '640px 360px', transform: camTransform(openCamera(frame - p.flashAt)) }}>{picture}</AbsoluteFill>
+        </AbsoluteFill>
       ) : (
         <AbsoluteFill style={{ transformOrigin: '640px 360px', transform: camTransform(cam) }}>
           {/* 四边多铺一点，镜头轻微晃动时不露边 */}
@@ -121,7 +134,7 @@ export const PhotoTitle: React.FC<PhotoTitleProps> = (p) => {
           {/* 引号：很淡的灰 */}
           <Smear t={t - T.quote} style={{ left: 330, top: 60, fontSize: 210, color: 'rgba(170,170,170,0.8)', fontWeight: 900 }}>“</Smear>
           {/* 引导词：右边对齐到 x=320 */}
-          <Smear t={t - T.lead} style={{ right: 1280 - 322, top: 106, fontSize: 76, color: '#3a3a3a', fontWeight: 700, filter: 'blur(0.8px)' }}>{p.lead}</Smear>
+          <Smear t={t - T.lead} style={{ right: 1280 - 322, top: 106, fontSize: 76, color: '#1c1c1c', fontWeight: 700 }}>{p.lead}</Smear>
           <Glitch t={t} word={p.word1} />
           {/* 连接词：竖向拉长 */}
           <Smear t={t - T.connector} style={{ left: 150, top: 222, fontSize: 192, color: '#161616', fontWeight: 900, scaleY: 1.33 }}>{p.connector}</Smear>

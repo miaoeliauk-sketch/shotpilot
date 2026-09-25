@@ -4,7 +4,7 @@ import { highlightSegments } from '../templates/src/doc-highlight/DocHighlight';
 import * as bubbles from '../templates/src/product-bubbles/params';
 import { camera, SLOTS } from '../templates/src/product-bubbles/ProductBubbles';
 import * as photo from '../templates/src/photo-title/params';
-import { shotCamera } from '../templates/src/photo-title/PhotoTitle';
+import { openCamera, shotCamera } from '../templates/src/photo-title/PhotoTitle';
 import * as pointing from '../templates/src/pointing-interview/params';
 import { TEMPLATES } from '../templates/src/registry';
 import type { BodyChar } from '../templates/src/text-layout';
@@ -78,6 +78,14 @@ describe('闪白切换 · 竖排标题', () => {
     expect(photo.toProps({ ...photo.defaultParams, titleAt: 0 }).titleAt).toBe(48);
     const next = photo.timeline.apply(raw(photo.defaultParams), 'photo1', 'end', 0, 2.53) as unknown as photo.PhotoTitleParams;
     expect(next.titleAt).toBeCloseTo(2.87, 5);
+  });
+
+  it('第一张照片：越推越快，闪白时约 1.3 倍、画面往右走', () => {
+    expect(openCamera(-46)).toEqual({ s: 1, x: 640, y: 360 });
+    expect(openCamera(-60)).toEqual({ s: 1, x: 640, y: 360 });
+    expect(openCamera(-20).s - openCamera(-40).s).toBeLessThan(openCamera(0).s - openCamera(-20).s);
+    expect(openCamera(0).s).toBeCloseTo(1.3, 1);
+    expect(openCamera(0).x).toBeGreaterThan(700);
   });
 
   it('第二张照片：切过去时推近到约 1.44 倍，4 秒内拉回原位', () => {

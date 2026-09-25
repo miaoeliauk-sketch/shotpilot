@@ -124,7 +124,7 @@ export const meta: TemplateMeta = {
   id: 'photo-title',
   name: '闪白切换 · 竖排大字标题',
   description: '黑白照片闪白切到第二张，左边一组大字标题逐个出现：主词故障闪现，其余带拖影淡入，底下画一条细线',
-  origin: '复刻自一条新闻解读视频的开场，和原片的相似度 86.3%（照片用原片画面比）',
+  origin: '复刻自一条新闻解读视频的开场，和原片的相似度 85.8%（照片用原片画面比）',
   width: 1280,
   height: 720,
   fps: FPS,

@@ -233,7 +233,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`big-number`](templates/src/big-number/) | 5 秒的金色发光大数字「400+」，背景可以放视频 | SSIM 0.903 |
 | [`doc-highlight`](templates/src/doc-highlight/) | 5 秒：旧墙上升起新闻稿 → 推近 → 正文特写，荧光笔划重点 | SSIM 0.797 |
 | [`product-bubbles`](templates/src/product-bubbles/) | 4 秒：产品大字 + 三个功能圆球依次长出来，镜头推向其中一个 | SSIM 0.857 |
-| [`photo-title`](templates/src/photo-title/) | 6.5 秒：黑白照片闪白切换，一组竖排大字标题逐个出现 | SSIM 0.863 |
+| [`photo-title`](templates/src/photo-title/) | 6.5 秒：黑白照片闪白切换，一组竖排大字标题逐个出现 | SSIM 0.858 |
 | [`pointing-interview`](templates/src/pointing-interview/) | 11 秒：指向人物 + 逐字标题 → 笔刷转场 → 对话场景和对话框 | SSIM 0.848 |
 | [`drop-title`](templates/src/drop-title/) | 4 秒：暗色视频上白色大标题逐字砸下 | SSIM 0.894 |
 | [`clause-typewriter`](templates/src/clause-typewriter/) | 5 秒：老照片背景，条文一个字一个字打出来，笔刷划重点 | SSIM 0.845 |
