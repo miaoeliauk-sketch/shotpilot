@@ -69,6 +69,8 @@ import { TicketPercent } from './ticket-percent/TicketPercent';
 import * as ticketPercent from './ticket-percent/params';
 import { ChatGuest } from './chat-guest/ChatGuest';
 import * as chatGuest from './chat-guest/params';
+import { TwoSides } from './two-sides/TwoSides';
+import * as twoSides from './two-sides/params';
 
 /**
  * 工作台里能用的模板。
@@ -257,6 +259,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...chatGuest.meta,
     component: ChatGuest,
     toProps: (p) => chatGuest.toProps(p as unknown as chatGuest.ChatGuestParams),
+  },
+  {
+    ...twoSides.meta,
+    component: TwoSides,
+    toProps: (p) => twoSides.toProps(p as unknown as twoSides.TwoSidesParams),
   },
 ];
 

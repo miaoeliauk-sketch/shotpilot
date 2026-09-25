@@ -147,8 +147,9 @@ const RedWord: React.FC<{ text: string; u: number; align: 'left' | 'right' }> = 
 };
 
 /** 白色圆角图标：有厚度（右下一圈灰边）、投影；里面是字或者一张图 */
-const IconTile: React.FC<{ pose: ReturnType<typeof iconPose>; text: string; image: string }> = ({ pose, text, image }) => {
-  const { size, radius } = ICON;
+export const IconTile: React.FC<{ pose: ReturnType<typeof iconPose>; text: string; image: string; size?: number; textScale?: number }> = ({ pose, text, image, size = ICON.size, textScale = 1 }) => {
+  const radius = (ICON.radius * size) / ICON.size;
+  const k = (size / ICON.size) * textScale;
   return (
     <div style={{ position: 'absolute', left: 0, top: 0, width: 1280, height: 720, perspective: 1400, perspectiveOrigin: `${pose.x}px ${pose.y}px` }}>
       <div
@@ -172,7 +173,7 @@ const IconTile: React.FC<{ pose: ReturnType<typeof iconPose>; text: string; imag
             <div
               style={{
                 position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: `"${BUNDLED_FONTS.oswald.family}", ${SANS}`, fontWeight: 300, fontSize: 375, lineHeight: 1, color: '#5a5a5a',
+                fontFamily: `"${BUNDLED_FONTS.oswald.family}", ${SANS}`, fontWeight: 300, fontSize: 375 * k, lineHeight: 1, color: '#5a5a5a',
                 letterSpacing: -8, paddingRight: 26, paddingTop: 4, textShadow: '2px 3px 0 #2e2e2e',
               }}
             >
