@@ -4,6 +4,7 @@ import { highlightSegments } from '../templates/src/doc-highlight/DocHighlight';
 import * as bubbles from '../templates/src/product-bubbles/params';
 import { camera, SLOTS } from '../templates/src/product-bubbles/ProductBubbles';
 import * as photo from '../templates/src/photo-title/params';
+import { shotCamera } from '../templates/src/photo-title/PhotoTitle';
 import * as pointing from '../templates/src/pointing-interview/params';
 import { TEMPLATES } from '../templates/src/registry';
 import type { BodyChar } from '../templates/src/text-layout';
@@ -77,6 +78,22 @@ describe('闪白切换 · 竖排标题', () => {
     expect(photo.toProps({ ...photo.defaultParams, titleAt: 0 }).titleAt).toBe(48);
     const next = photo.timeline.apply(raw(photo.defaultParams), 'photo1', 'end', 0, 2.53) as unknown as photo.PhotoTitleParams;
     expect(next.titleAt).toBeCloseTo(2.87, 5);
+  });
+
+  it('第二张照片：切过去时推近到约 1.44 倍，4 秒内拉回原位', () => {
+    const start = shotCamera(0);
+    expect(start.s).toBeCloseTo(1.44, 2);
+    expect(start.x).toBeLessThan(640);
+    expect(shotCamera(5).s).toBeGreaterThan(start.s);
+    expect(shotCamera(148)).toEqual({ s: 1, x: 640, y: 360 });
+    const title = shotCamera(9, true);
+    expect(title.s).toBeLessThan(shotCamera(9).s);
+    expect(shotCamera(200, true)).toEqual({ s: 1, x: 640, y: 360 });
+  });
+
+  it('胶片边框默认打开，可以关掉', () => {
+    expect(photo.toProps(photo.defaultParams).filmFrame).toBe(true);
+    expect(photo.toProps({ ...photo.defaultParams, filmFrame: false }).filmFrame).toBe(false);
   });
 });
 

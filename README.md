@@ -233,7 +233,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`big-number`](templates/src/big-number/) | 5 秒的金色发光大数字「400+」，背景可以放视频 | SSIM 0.903 |
 | [`doc-highlight`](templates/src/doc-highlight/) | 5 秒：旧墙上升起新闻稿 → 推近 → 正文特写，荧光笔划重点 | SSIM 0.797 |
 | [`product-bubbles`](templates/src/product-bubbles/) | 4 秒：产品大字 + 三个功能圆球依次长出来，镜头推向其中一个 | SSIM 0.857 |
-| [`photo-title`](templates/src/photo-title/) | 6.5 秒：黑白照片闪白切换，一组竖排大字标题逐个出现 | SSIM 0.828 |
+| [`photo-title`](templates/src/photo-title/) | 6.5 秒：黑白照片闪白切换，一组竖排大字标题逐个出现 | SSIM 0.863 |
 | [`pointing-interview`](templates/src/pointing-interview/) | 11 秒：指向人物 + 逐字标题 → 笔刷转场 → 对话场景和对话框 | SSIM 0.848 |
 | [`drop-title`](templates/src/drop-title/) | 4 秒：暗色视频上白色大标题逐字砸下 | SSIM 0.894 |
 | [`clause-typewriter`](templates/src/clause-typewriter/) | 5 秒：老照片背景，条文一个字一个字打出来，笔刷划重点 | SSIM 0.845 |
@@ -248,7 +248,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`tweet-translate`](templates/src/tweet-translate/) | 4 秒：英文原文特写慢慢漂，一行行刷出黑底翻译，重点词变色 | SSIM 0.758 |
 | [`article-marker`](templates/src/article-marker/) | 4.5 秒：从帖子拉远到整篇文章，一句话被黑条涂黑、镜头推上去 | SSIM 0.793 |
 | [`office-tags`](templates/src/office-tags/) | 9 秒：近景横移 → 全景拉远，墙上灰色大字，牛皮纸标签钉上去拉红线 | SSIM 0.871 |
-| [`nameplate-story`](templates/src/nameplate-story/) | 15.6 秒：公司铭牌 + 人数 → 横甩到第二块铭牌、红线和引语 → 墨刷转场到日期页 | SSIM 0.828 |
+| [`nameplate-story`](templates/src/nameplate-story/) | 15.6 秒：公司铭牌 + 人数 → 横甩到第二块铭牌、红线和引语 → 墨刷转场到日期页 | SSIM 0.863 |
 | [`spotlight-detour`](templates/src/spotlight-detour/) | 17 秒：格子纸聚光圆台、金字红字 → 上摇到三个红字标签和粉红大圆 | SSIM 0.811 |
 | [`logo-title-cards`](templates/src/logo-title-cards/) | 9 秒：人物 + logo 挡脸，标题从方块后滑出、画细线框，一叠纸片从手里飞出来 | SSIM 0.841 |
 | [`doc-portrait-count`](templates/src/doc-portrait-count/) | 14.7 秒：文件截图斜着滑进来 → 虚掉滑走露出人物，金色数字从 0 数上去，一排纸片 | SSIM 0.817 |

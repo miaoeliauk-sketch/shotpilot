@@ -9,6 +9,7 @@ export type PhotoTitleParams = {
   photo1: string;
   photo2: string;
   grayscale: boolean;
+  filmFrame: boolean;
   lead: string;
   word1: string;
   connector: string;
@@ -24,6 +25,7 @@ export const defaultParams: PhotoTitleParams = {
   photo1: '/template-assets/photo-title/sample-1.jpg',
   photo2: '/template-assets/photo-title/sample-2.jpg',
   grayscale: true,
+  filmFrame: true,
   lead: '苹果的',
   word1: '偷',
   connector: '和',
@@ -42,6 +44,7 @@ export function toProps(p: PhotoTitleParams): PhotoTitleProps {
     photo1: p.photo1,
     photo2: p.photo2,
     grayscale: p.grayscale,
+    filmFrame: p.filmFrame !== false,
     lead: p.lead,
     word1: p.word1,
     connector: p.connector,
@@ -73,6 +76,7 @@ const form: Section[] = [
       { kind: 'media', key: 'photo1', label: '开场照片', hint: '闪白之前那一张' },
       { kind: 'media', key: 'photo2', label: '标题背景', hint: '闪白之后那一张，右半边留给主体，左边放字' },
       { kind: 'toggle', key: 'grayscale', label: '变成黑白', hint: '原片是黑白老照片的感觉' },
+      { kind: 'toggle', key: 'filmFrame', label: '胶片边框', hint: '第二张照片四周一圈暗边、右边带齿孔，和照片一起拉远' },
       { kind: 'number', key: 'flashAt', label: '第几秒闪白切换', min: 0.2, max: 60, step: 0.1, unit: '秒' },
       { kind: 'number', key: 'duration', label: '视频时长', min: 1, max: 60, step: 0.1, unit: '秒' },
     ],
@@ -120,7 +124,7 @@ export const meta: TemplateMeta = {
   id: 'photo-title',
   name: '闪白切换 · 竖排大字标题',
   description: '黑白照片闪白切到第二张，左边一组大字标题逐个出现：主词故障闪现，其余带拖影淡入，底下画一条细线',
-  origin: '复刻自一条新闻解读视频的开场，和原片的相似度 82.8%（照片用原片画面比）',
+  origin: '复刻自一条新闻解读视频的开场，和原片的相似度 86.3%（照片用原片画面比）',
   width: 1280,
   height: 720,
   fps: FPS,
