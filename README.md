@@ -238,6 +238,11 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`drop-title`](templates/src/drop-title/) | 4 秒：暗色视频上白色大标题逐字砸下 | SSIM 0.894 |
 | [`clause-typewriter`](templates/src/clause-typewriter/) | 5 秒：老照片背景，条文一个字一个字打出来，笔刷划重点 | SSIM 0.845 |
 | [`orbit-labels`](templates/src/orbit-labels/) | 15 秒：中心配图 + 环绕的关键词标签，椭圆串起来 | SSIM 0.870 |
+| [`torn-cards`](templates/src/torn-cards/) | 5 秒：暗色做旧背景上，撕纸边产品图卡片依次切换 | SSIM 0.920 |
+| [`company-cards`](templates/src/company-cards/) | 10 秒：公司名大字配手写签名 → 横甩到人物卡片 | SSIM 0.884 |
+| [`cards-note`](templates/src/cards-note/) | 2.6 秒：两张人物卡片特写，红线相连，中间打字 | SSIM 0.755 |
+| [`verdict-title`](templates/src/verdict-title/) | 4 秒：深色背景白金两行标题闪出、金色弧线、正文快速打字 | SSIM 0.807 |
+| [`news-screenshot`](templates/src/news-screenshot/) | 7 秒：网页正文滚动、黑底黄字标重点、推近 → 配图压下 → 英文标题刷黑配中文翻译 | SSIM 0.797 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

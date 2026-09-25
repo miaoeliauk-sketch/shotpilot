@@ -25,6 +25,9 @@ describe('模板注册表', () => {
     expect(frames['pointing-interview']).toBe(333);
     expect(frames['clause-typewriter']).toBe(156);
     expect(frames['orbit-labels']).toBe(450);
+    expect(frames['torn-cards']).toBe(160);
+    expect(frames['cards-note']).toBe(78);
+    expect(frames['verdict-title']).toBe(129);
   });
 });
 
@@ -158,5 +161,80 @@ describe('对话框换行', async () => {
   it('框宽跟着最长那一行', () => {
     const w = wrapBubble('一二三', '400 20px sans-serif', 500);
     expect(w.width).toBe(60);
+  });
+});
+
+describe('撕纸边卡片', async () => {
+  const { cardPose } = await import('../templates/src/torn-cards/TornCards');
+  const torn = await import('../templates/src/torn-cards/params');
+  const cards = torn.toProps(torn.defaultParams).cards;
+
+  it('默认按原片：第 3、72 帧进来，边长 534、396', () => {
+    expect(cards.map((c) => c.at)).toEqual([3, 72]);
+    expect(Math.round(cards[0]!.size)).toBe(533);
+  });
+
+  it('第一张斜着进来、最后摆正；下一张进来后几帧被甩出画面（原片第 74 帧左边还露一条边）', () => {
+    expect(cardPose(0, cards, 3)!.rot).toBeCloseTo(16, 5);
+    expect(cardPose(0, cards, 60)!.rot).toBeCloseTo(0, 5);
+    expect(cardPose(0, cards, 72)!.x).toBeLessThan(0);
+    expect(cardPose(0, cards, 76)).toBeNull();
+  });
+
+  it('后面的卡片从右边滑进来，越来越慢地停到中间', () => {
+    const a = cardPose(1, cards, 80)!.x;
+    const b = cardPose(1, cards, 120)!.x;
+    expect(a).toBeGreaterThan(b);
+    // 原片第 120 帧离中间还有 10px，第 150 帧才基本停住
+    expect(b - 640).toBeGreaterThan(5);
+    expect(cardPose(1, cards, 150)!.x - 640).toBeLessThan(2);
+  });
+});
+
+describe('人物卡片', async () => {
+  const company = await import('../templates/src/company-cards/params');
+  const { typeSchedule } = await import('../templates/src/cards-note/CardsNote');
+
+  it('公司名：默认第 110 帧横甩、第 206 帧第二张', () => {
+    const p = company.toProps(company.defaultParams);
+    expect([p.whipAt, p.card2At, p.durationInFrames]).toEqual([110, 206, 296]);
+  });
+
+  it('拖公司名那段的右边，后面的时间一起顺延', () => {
+    const next = company.timeline.apply(raw(company.defaultParams), 'title', 'end', 0, 4.67) as unknown as typeof company.defaultParams;
+    expect(next.card2At).toBeCloseTo(7.87, 5);
+    expect(next.duration).toBeCloseTo(10.87, 5);
+  });
+
+  it('打字：英文快、中文慢，换行停一下', () => {
+    const [l1, l2] = typeSchedule(['ab', '中文']);
+    expect(l1).toEqual([0, 0.9]);
+    expect(l2![0]).toBeCloseTo(1.8 + 6, 5);
+    expect(l2![1]! - l2![0]!).toBeCloseTo(3.4, 5);
+  });
+});
+
+describe('深色判决标题', async () => {
+  const verdict = await import('../templates/src/verdict-title/params');
+
+  it('默认每秒 135 个字（每帧 4.5 个），第 19 帧开始打', () => {
+    const p = verdict.toProps(verdict.defaultParams);
+    expect(p.charsPerFrame).toBeCloseTo(4.5, 5);
+    expect(p.typeAt).toBe(19);
+  });
+});
+
+describe('网页新闻截图', async () => {
+  const { scrolled } = await import('../templates/src/news-screenshot/NewsScreenshot');
+  const shot = await import('../templates/src/news-screenshot/params');
+
+  it('滚动越来越慢：前 10 帧比后 10 帧滚得多得多', () => {
+    expect(scrolled(10)).toBeGreaterThan(3 * (scrolled(51) - scrolled(41)));
+    expect(scrolled(0)).toBe(0);
+  });
+
+  it('默认按原片：第 32 帧标重点、第 51 帧推近、第 88 帧配图压下来', () => {
+    const p = shot.toProps(shot.defaultParams);
+    expect([p.highlightAt, p.zoomAt, p.photoAt, p.durationInFrames]).toEqual([32, 51, 88, 219]);
   });
 });

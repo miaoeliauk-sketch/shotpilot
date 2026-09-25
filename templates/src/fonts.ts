@@ -14,6 +14,10 @@ export const BUNDLED_FONTS = {
   bebas: { family: 'ShotPilot Bebas Neue', file: 'BebasNeue-Regular.ttf', weight: '100 900' },
   /** 窄体，有小写；可变字重 200–700 */
   oswald: { family: 'ShotPilot Oswald', file: 'Oswald-Variable.ttf', weight: '200 700' },
+  /** 方正的无衬线体（公司名、大号英文） */
+  barlow: { family: 'ShotPilot Barlow', file: 'Barlow-Medium.ttf', weight: '100 900' },
+  /** 手写签名体 */
+  vibes: { family: 'ShotPilot Great Vibes', file: 'GreatVibes-Regular.ttf', weight: '100 900' },
 } as const;
 
 type FontKey = keyof typeof BUNDLED_FONTS;

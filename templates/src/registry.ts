@@ -22,6 +22,16 @@ import { ClauseTypewriter } from './clause-typewriter/ClauseTypewriter';
 import * as clauseTypewriter from './clause-typewriter/params';
 import { OrbitLabels } from './orbit-labels/OrbitLabels';
 import * as orbitLabels from './orbit-labels/params';
+import { VerdictTitle } from './verdict-title/VerdictTitle';
+import * as verdictTitle from './verdict-title/params';
+import { TornCards } from './torn-cards/TornCards';
+import * as tornCards from './torn-cards/params';
+import { CompanyCards } from './company-cards/CompanyCards';
+import * as companyCards from './company-cards/params';
+import { CardsNote } from './cards-note/CardsNote';
+import * as cardsNote from './cards-note/params';
+import { NewsScreenshot } from './news-screenshot/NewsScreenshot';
+import * as newsScreenshot from './news-screenshot/params';
 
 /**
  * 工作台里能用的模板。
@@ -90,6 +100,31 @@ export const TEMPLATES: TemplateDef[] = [
     ...orbitLabels.meta,
     component: OrbitLabels,
     toProps: (p) => orbitLabels.toProps(p as unknown as orbitLabels.OrbitLabelsParams),
+  },
+  {
+    ...verdictTitle.meta,
+    component: VerdictTitle,
+    toProps: (p) => verdictTitle.toProps(p as unknown as verdictTitle.VerdictTitleParams),
+  },
+  {
+    ...tornCards.meta,
+    component: TornCards,
+    toProps: (p) => tornCards.toProps(p as unknown as tornCards.TornCardsParams),
+  },
+  {
+    ...companyCards.meta,
+    component: CompanyCards,
+    toProps: (p) => companyCards.toProps(p as unknown as companyCards.CompanyCardsParams),
+  },
+  {
+    ...cardsNote.meta,
+    component: CardsNote,
+    toProps: (p) => cardsNote.toProps(p as unknown as cardsNote.CardsNoteParams),
+  },
+  {
+    ...newsScreenshot.meta,
+    component: NewsScreenshot,
+    toProps: (p) => newsScreenshot.toProps(p as unknown as newsScreenshot.NewsScreenshotParams),
   },
 ];
 

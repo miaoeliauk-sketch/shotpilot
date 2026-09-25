@@ -40,7 +40,11 @@ export type Underline = { paragraph: number; x0: number; x1: number; center: num
 
 export type BodyLayout = { chars: BodyChar[]; underlines: Underline[]; lines: number };
 
-export type BodyBox = { left: number; right: number; firstCenter: number; size: number; lineHeight: number; paragraphGap: number; indent: number };
+export type BodyBox = {
+  left: number; right: number; firstCenter: number; size: number; lineHeight: number; paragraphGap: number; indent: number;
+  /** 字距（px），每个字后面多空这么多；默认 0 */
+  letterSpacing?: number;
+};
 
 /** 一笔划线最长多少个字宽 */
 const UNDERLINE_MAX_EM = 19;
@@ -66,7 +70,7 @@ export function layoutBody(paragraphs: Paragraph[], box: BodyBox, family: string
     // 英文、数字连在一起不拆开，其余每个字一个块
     const tokens: Token[] = [];
     glyphs.forEach((ch, i) => {
-      const w = measure(ch, `${isHl(i) ? 500 : 400} ${box.size}px ${family}`);
+      const w = measure(ch, `${isHl(i) ? 500 : 400} ${box.size}px ${family}`) + (box.letterSpacing ?? 0);
       const last = tokens[tokens.length - 1];
       const prev = glyphs[i - 1];
       if (last && prev && /[A-Za-z0-9]/.test(ch) && /[A-Za-z0-9]/.test(prev)) {
