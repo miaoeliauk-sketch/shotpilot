@@ -5,6 +5,8 @@ import * as pp from '../templates/src/poster-pair/params';
 import { cameraScale as ppCamera, mergePose, typedMiddle } from '../templates/src/poster-pair/PosterPair';
 import * as ne from '../templates/src/not-equal/params';
 import { cameraScale as neCamera, wordsIn, wordsPose } from '../templates/src/not-equal/NotEqual';
+import * as rs from '../templates/src/record-sheet/params';
+import { sheetPose, written } from '../templates/src/record-sheet/RecordSheet';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -90,5 +92,30 @@ describe('大字 A ≠ B · 两张海报卡片', () => {
   it('拖时间轴：大字块的尾巴改盖卡片的时间', () => {
     const moved = ne.timeline.apply(raw(ne.defaultParams), 'words', 'end', 0, 2.5) as unknown as ne.NotEqualParams;
     expect(moved.cardsAt).toBe(2.5);
+  });
+});
+
+describe('旧档案表 · 飞进来 · 一栏栏填写', () => {
+  it('默认按原片：152 帧，四栏在飞进来后第 16、26、50、70 帧开始写', () => {
+    const p = rs.toProps(rs.defaultParams);
+    expect(p.durationInFrames).toBe(152);
+    expect(p.fields.map((f) => f.at)).toEqual([16, 26, 50, 70]);
+  });
+
+  it('飞进来 16 帧：从左下转着到中间，之后慢慢推近到 1 倍', () => {
+    expect(sheetPose(0).rot).toBeCloseTo(11.6, 5);
+    expect(sheetPose(0).y).toBeGreaterThan(800);
+    expect(sheetPose(16)).toEqual({ x: 650, y: 350, s: 0.9164, rot: 0 });
+    expect(sheetPose(126).s).toBe(1);
+  });
+
+  it('每 8 帧写一个字；推迟飞进来，写字的时间跟着往后挪', () => {
+    const f = { label: 'NAME', value: 'XXX', at: 16 };
+    expect(written(15, f)).toBe(0);
+    expect(written(16, f)).toBe(1);
+    expect(written(32, f)).toBe(3);
+    const moved = rs.timeline.apply(raw(rs.defaultParams), 'cam', 'move', 1, 3) as unknown as rs.RecordSheetParams;
+    expect(moved.enterAt).toBe(1);
+    expect(moved.fields[0]!.at).toBeCloseTo(1.53, 5);
   });
 });

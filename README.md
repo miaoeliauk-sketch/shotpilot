@@ -265,6 +265,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`two-sides`](templates/src/two-sides/) | 26.7 秒：中间白色图标、左右两段说明，镜头推到左边、切到右边、拉回全景，最后背景变暗、左右红字亮起来 | SSIM 0.815 |
 | [`poster-pair`](templates/src/poster-pair/) | 10.5 秒：口播画面上两张海报卡片出来、背景换成灰墙、中间打出一句话，右边那张叠过去，右边一行行大字淡进来 | SSIM 0.859 |
 | [`not-equal`](templates/src/not-equal/) | 5.8 秒：一排很高的压窄大字「A ≠ B」、≠ 发红光，之后大字变虚、两张海报卡片盖在两边 | SSIM 0.853 |
+| [`record-sheet`](templates/src/record-sheet/) | 5.1 秒：一张发黄的旧档案表转着飞进来铺满画面，前四栏一个字一个字写上内容，镜头慢慢推近 | SSIM 0.823 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

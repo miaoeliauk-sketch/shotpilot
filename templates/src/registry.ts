@@ -75,6 +75,8 @@ import { PosterPair } from './poster-pair/PosterPair';
 import * as posterPair from './poster-pair/params';
 import { NotEqual } from './not-equal/NotEqual';
 import * as notEqual from './not-equal/params';
+import { RecordSheet } from './record-sheet/RecordSheet';
+import * as recordSheet from './record-sheet/params';
 
 /**
  * 工作台里能用的模板。
@@ -278,6 +280,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...notEqual.meta,
     component: NotEqual,
     toProps: (p) => notEqual.toProps(p as unknown as notEqual.NotEqualParams),
+  },
+  {
+    ...recordSheet.meta,
+    component: RecordSheet,
+    toProps: (p) => recordSheet.toProps(p as unknown as recordSheet.RecordSheetParams),
   },
 ];
 
