@@ -71,6 +71,8 @@ import { ChatGuest } from './chat-guest/ChatGuest';
 import * as chatGuest from './chat-guest/params';
 import { TwoSides } from './two-sides/TwoSides';
 import * as twoSides from './two-sides/params';
+import { PosterPair } from './poster-pair/PosterPair';
+import * as posterPair from './poster-pair/params';
 
 /**
  * 工作台里能用的模板。
@@ -264,6 +266,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...twoSides.meta,
     component: TwoSides,
     toProps: (p) => twoSides.toProps(p as unknown as twoSides.TwoSidesParams),
+  },
+  {
+    ...posterPair.meta,
+    component: PosterPair,
+    toProps: (p) => posterPair.toProps(p as unknown as posterPair.PosterPairParams),
   },
 ];
 

@@ -263,6 +263,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`ticket-percent`](templates/src/ticket-percent/) | 13.3 秒：虚化的人物照片上打出一句提问，两张票和绿、红两个大百分比先后飞进来，甩走后出一叠钞票和银色金额 | SSIM 0.915 |
 | [`chat-guest`](templates/src/chat-guest/) | 12 秒：虚化的口播人物照片，左边滑进来一个 logo 挡脸的人，旁边深色对话条一条条长出来、打字，镜头慢慢推近 | SSIM 0.926 |
 | [`two-sides`](templates/src/two-sides/) | 26.7 秒：中间白色图标、左右两段说明，镜头推到左边、切到右边、拉回全景，最后背景变暗、左右红字亮起来 | SSIM 0.815 |
+| [`poster-pair`](templates/src/poster-pair/) | 10.5 秒：口播画面上两张海报卡片出来、背景换成灰墙、中间打出一句话，右边那张叠过去，右边一行行大字淡进来 | SSIM 0.859 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

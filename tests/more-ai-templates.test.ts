@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as ts from '../templates/src/two-sides/params';
 import { camera as tsCamera, redProgress, tilePose } from '../templates/src/two-sides/TwoSides';
+import * as pp from '../templates/src/poster-pair/params';
+import { cameraScale as ppCamera, mergePose, typedMiddle } from '../templates/src/poster-pair/PosterPair';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -34,5 +36,33 @@ describe('中间图标 · 左右两段说明 · 红字结尾', () => {
   it('拖时间轴：全景块的尾巴改推到左边的时间', () => {
     const moved = ts.timeline.apply(raw(ts.defaultParams), 'wide', 'end', 0, 7) as unknown as ts.TwoSidesParams;
     expect(moved.leftAt).toBe(7);
+  });
+});
+
+describe('两张海报卡片 · 合在一起 · 右边大字', () => {
+  it('默认按原片：315 帧，第 128 帧合在一起，右边三行在 148、226、262 帧', () => {
+    const p = pp.toProps(pp.defaultParams);
+    expect(p.durationInFrames).toBe(315);
+    expect(p.mergeAt).toBe(128);
+    expect(p.lines.map((l) => l.at)).toEqual([148, 226, 262]);
+    expect([p.left.tone, p.right.tone]).toEqual(['cream', 'peach']);
+  });
+
+  it('右卡片往左滑 560、往下 26，左卡片歪 −6°；镜头 120 帧 1 倍、越推越慢', () => {
+    expect(mergePose(100, 128)).toEqual({ dx: 0, dy: 0, rot: -0 });
+    const end = mergePose(160, 128);
+    expect(end.dx).toBe(-560);
+    expect(end.dy).toBeCloseTo(26, 5);
+    expect(end.rot).toBeCloseTo(-6, 5);
+    expect(ppCamera(120)).toBe(1);
+    expect(ppCamera(300) - ppCamera(260)).toBeLessThan(ppCamera(200) - ppCamera(160));
+  });
+
+  it('中间那句从第 72 帧起每 4 帧打一个字；空的行不出', () => {
+    expect(typedMiddle(71, '同一套')).toBe(0);
+    expect(typedMiddle(76, '同一套')).toBe(2);
+    expect(typedMiddle(200, '同一套')).toBe(3);
+    const p = pp.toProps({ ...pp.defaultParams, lines: [{ before: '', big: ' ', after: '', at: 1 }, { before: '', big: '留', after: '', at: 2 }] });
+    expect(p.lines).toHaveLength(1);
   });
 });
