@@ -3,6 +3,7 @@ import { AbsoluteFill, Easing, Img, continueRender, delayRender, interpolate, us
 import { assetUrl, bundledUrl } from '../asset';
 import { Media } from '../media';
 import { inkMaskUrl } from '../news-headline/ink';
+import { measure } from '../text-layout';
 
 /**
  * 复刻：指向的人物 + 逐字标题 → 笔刷转场 → 面试场景 + 对话框（333 帧，1280×720 @30fps）
@@ -84,10 +85,34 @@ const B_S = [1.86, 1.84, 1.8, 1.76, 1.7, 1.58, 1.47, 1.36, 1.23, 1.13, 1.06, 1.0
 const B_ANCHOR = { x: 610, y: 365 };
 const PEOPLE_BOX = { left: 400, top: 210, width: 420, height: 310 };
 /**
- * 对话框（第 300 帧量的）：高 46 的胶囊，两头全圆；字 25px、偏粗、带一点白色光晕，几乎顶到左边；
- * 胶囊外面一圈淡淡的冷色光边。展开 18 帧，打字每个字 1 帧。上面那个对话框字小一号、灰一点，可以两行。
+ * 对话框（第 300 帧量的）：
+ *   左右两个  高 45 的胶囊，两头全圆；字 25px、中等粗细、带一点白色光晕，左右各留 9px；框的宽度跟着字走
+ *   上面那个  圆角矩形、半透明深灰，字 22px、灰白，一行 13 个字左右，放不下就换行
+ * 胶囊外面一圈淡淡的冷色光边。展开 18 帧，打字每个字 1 帧。
  */
-const BUBBLE = { height: 46, font: 25, smallFont: 23, grow: 18, perChar: 1, line: 30, padding: 9 };
+const BUBBLE = { height: 45, font: 25, smallFont: 22, grow: 18, perChar: 1, line: 28, padding: 9, smallPadding: 8 };
+
+/** 按实际字宽换行（不能按字数估：省略号、英文比汉字窄得多） */
+export function wrapBubble(text: string, font: string, maxWidth: number): { lines: string[]; width: number } {
+  const lines: string[] = [];
+  let cur = '';
+  let widest = 0;
+  for (const ch of Array.from(text)) {
+    const next = cur + ch;
+    if (cur && measure(next, font) > maxWidth) {
+      lines.push(cur);
+      widest = Math.max(widest, measure(cur, font));
+      cur = ch;
+    } else {
+      cur = next;
+    }
+  }
+  if (cur || lines.length === 0) {
+    lines.push(cur);
+    widest = Math.max(widest, measure(cur, font));
+  }
+  return { lines, width: widest };
+}
 
 export const PointingInterview: React.FC<PointingInterviewProps> = (p) => {
   const frame = useCurrentFrame();
@@ -215,42 +240,55 @@ const SceneB: React.FC<{ p: PointingInterviewProps; frame: number }> = ({ p, fra
       {/* 地面：从背墙底边往前铺开，桌子底下一团暗影 */}
       <div style={{ position: 'absolute', left: 0, top: 0, width: 1280, height: 1100, background: 'linear-gradient(to bottom, #7c7c7c, #a2a2a2 35%, #b4b4b4 70%)', clipPath: 'polygon(420px 441px, 856px 441px, 1375px 1100px, -140px 1100px)' }} />
       <div style={{ position: 'absolute', left: 400, top: 420, width: 460, height: 170, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(20,20,20,0.9), rgba(20,20,20,0))' }} />
-      <Img src={assetUrl(p.people)} style={{ position: 'absolute', left: PEOPLE_BOX.left, top: PEOPLE_BOX.top, width: PEOPLE_BOX.width, height: PEOPLE_BOX.height, objectFit: 'contain', objectPosition: 'center bottom' }} />
+      {/* 对话框在人物后面：原片里人的脸、肩膀压在对话框上 */}
       {p.bubbles.map((b, i) => <BubbleView key={i} b={b} t={frame - b.at} />)}
+      <Img src={assetUrl(p.people)} style={{ position: 'absolute', left: PEOPLE_BOX.left, top: PEOPLE_BOX.top, width: PEOPLE_BOX.width, height: PEOPLE_BOX.height, objectFit: 'contain', objectPosition: 'center bottom' }} />
     </AbsoluteFill>
   );
 };
 
-/** 对话框：从左往右展开，字一个一个打出来；宽度放不下就换行（上面那个是两行） */
+/** 对话框：从左往右展开，字一个一个打出来 */
 const BubbleView: React.FC<{ b: SpeechBubble; t: number }> = ({ b, t }) => {
+  const small = b.small ?? false;
+  const size = small ? BUBBLE.smallFont : BUBBLE.font;
+  const weight = small ? 400 : 500;
+  const pad = small ? BUBBLE.smallPadding : BUBBLE.padding;
+  const font = `${weight} ${size}px ${HEAVY}`;
+  const wrap = useMemo(() => wrapBubble(b.text, font, b.width - pad * 2), [b.text, font, b.width, pad]);
   if (t < 0) return null;
   const grow = Easing.out(Easing.cubic)(interpolate(t, [0, BUBBLE.grow], [0, 1], clamp));
-  const chars = Array.from(b.text);
   const shown = Math.max(0, Math.floor((t - 3) / BUBBLE.perChar));
-  const small = b.small ?? false;
-  const font = small ? BUBBLE.smallFont : BUBBLE.font;
-  const perLine = Math.max(1, Math.floor((b.width - BUBBLE.padding * 2) / font));
-  const lines = Math.max(1, Math.ceil(chars.length / perLine));
-  const height = BUBBLE.height + (lines - 1) * BUBBLE.line;
-  const radius = lines > 1 ? 16 : BUBBLE.height / 2;
+  // 左右两个跟着字宽走；上面那个固定宽度
+  const width = small ? b.width : Math.min(b.width, wrap.width + pad * 2 + 2);
+  const height = BUBBLE.height + (wrap.lines.length - 1) * BUBBLE.line;
+  const radius = small ? 14 : BUBBLE.height / 2;
+  let left = shown;
   return (
     <div
       style={{
-        position: 'absolute', left: b.x, top: b.y, width: b.width, height, borderRadius: radius,
-        backgroundColor: b.small ? 'rgba(44,44,46,0.86)' : 'rgba(24,24,26,0.94)',
+        position: 'absolute', left: b.x, top: b.y, width, height, borderRadius: radius,
+        backgroundColor: small ? 'rgba(44,44,46,0.86)' : 'rgba(24,24,26,0.94)',
         boxShadow: '0 0 0 1.5px rgba(150,160,190,0.28), 0 0 12px rgba(190,200,240,0.28), 0 6px 14px rgba(0,0,0,0.4)',
         clipPath: `inset(-20px ${(1 - grow) * 100}% -20px -20px round ${radius}px)`,
       }}
     >
-      <div
-        style={{
-          position: 'absolute', left: BUBBLE.padding, top: (BUBBLE.height - BUBBLE.line) / 2, width: b.width - BUBBLE.padding * 2, lineHeight: `${BUBBLE.line}px`,
-          fontFamily: HEAVY, fontSize: font, fontWeight: small ? 400 : 500, color: small ? '#d2d2d2' : '#ededed', letterSpacing: small ? 0 : -0.3,
-          textShadow: small ? undefined : '0 0 6px rgba(255,255,255,0.35)', wordBreak: 'break-all', whiteSpace: 'pre-wrap', overflow: 'hidden', height: height - (BUBBLE.height - BUBBLE.line),
-        }}
-      >
-        {chars.slice(0, shown).join('')}
-      </div>
+      {wrap.lines.map((line, i) => {
+        const chars = Array.from(line);
+        const visible = chars.slice(0, Math.max(0, left)).join('');
+        left -= chars.length;
+        return (
+          <div
+            key={i}
+            style={{
+              position: 'absolute', left: pad, top: (BUBBLE.height - BUBBLE.line) / 2 + i * BUBBLE.line, height: BUBBLE.line, lineHeight: `${BUBBLE.line}px`,
+              fontFamily: HEAVY, fontSize: size, fontWeight: weight, color: small ? '#d2d2d2' : '#ededed', whiteSpace: 'pre',
+              textShadow: small ? undefined : '0 0 6px rgba(255,255,255,0.35)',
+            }}
+          >
+            {visible}
+          </div>
+        );
+      })}
     </div>
   );
 };

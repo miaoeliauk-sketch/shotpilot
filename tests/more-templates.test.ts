@@ -145,3 +145,18 @@ describe('环绕标签', async () => {
     expect(orbitProgress(201 + 35, labels)).toBe(1);
   });
 });
+
+describe('对话框换行', async () => {
+  const { wrapBubble } = await import('../templates/src/pointing-interview/PointingInterview');
+
+  it('按字宽换行：省略号、英文比汉字窄，不会被当成整字多算一行', () => {
+    // 测试里按「汉字 1 个字宽、英文 0.55 个」估：10 个汉字 + 3 个点 = 11.65 个字宽
+    expect(wrapBubble('你知道那个某某项目吗...', '500 20px sans-serif', 240).lines).toHaveLength(1);
+    expect(wrapBubble('你知道那个某某项目吗...', '500 20px sans-serif', 200).lines).toHaveLength(2);
+  });
+
+  it('框宽跟着最长那一行', () => {
+    const w = wrapBubble('一二三', '400 20px sans-serif', 500);
+    expect(w.width).toBe(60);
+  });
+});

@@ -28,7 +28,7 @@ export type PointingInterviewParams = {
 const SLOTS: Record<BubbleParams['side'], { x: number; y: number; width: number; small?: boolean }> = {
   right: { x: 753, y: 250, width: 306 },
   left: { x: 135, y: 319, width: 304 },
-  top: { x: 447, y: 118, width: 302, small: true },
+  top: { x: 447, y: 118, width: 304, small: true },
 };
 
 export const defaultParams: PointingInterviewParams = {
