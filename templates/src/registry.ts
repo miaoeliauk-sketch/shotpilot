@@ -67,6 +67,8 @@ import { PeopleLabels } from './people-labels/PeopleLabels';
 import * as peopleLabels from './people-labels/params';
 import { TicketPercent } from './ticket-percent/TicketPercent';
 import * as ticketPercent from './ticket-percent/params';
+import { ChatGuest } from './chat-guest/ChatGuest';
+import * as chatGuest from './chat-guest/params';
 
 /**
  * 工作台里能用的模板。
@@ -250,6 +252,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...ticketPercent.meta,
     component: TicketPercent,
     toProps: (p) => ticketPercent.toProps(p as unknown as ticketPercent.TicketPercentParams),
+  },
+  {
+    ...chatGuest.meta,
+    component: ChatGuest,
+    toProps: (p) => chatGuest.toProps(p as unknown as chatGuest.ChatGuestParams),
   },
 ];
 

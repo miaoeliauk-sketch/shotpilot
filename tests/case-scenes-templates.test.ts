@@ -5,6 +5,8 @@ import * as pl from '../templates/src/people-labels/params';
 import { camera as plCamera, reveal } from '../templates/src/people-labels/PeopleLabels';
 import * as tp from '../templates/src/ticket-percent/params';
 import { camera as tpCamera, questionState } from '../templates/src/ticket-percent/TicketPercent';
+import * as cg from '../templates/src/chat-guest/params';
+import { camera as cgCamera, lineState } from '../templates/src/chat-guest/ChatGuest';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -82,5 +84,34 @@ describe('口播人物 · 提问 · 两个百分比 · 钞票', () => {
     expect([q.grow, q.typed]).toEqual([0, 0]);
     expect(questionState(80, 50, '一二三四').typed).toBe(4);
     expect(tp.toProps({ ...tp.defaultParams, moneyOutAt: 5 }).moneyOutAt).toBe(320);
+  });
+});
+
+describe('口播人物 · logo 挡脸 · 对话条', () => {
+  it('默认按原片：360 帧，三条对话条在第 16、84、88 帧出来', () => {
+    const p = cg.toProps(cg.defaultParams);
+    expect(p.durationInFrames).toBe(360);
+    expect(p.lines.map((l) => l.at)).toEqual([16, 84, 88]);
+    expect(p.lines[0]!.align).toBe('right');
+  });
+
+  it('镜头 0.88 → 0.977 慢慢推近，接着「提问 · 百分比」的最后一帧', () => {
+    expect(cgCamera(0).s).toBeCloseTo(0.8798, 4);
+    expect(cgCamera(0).x).toBeCloseTo(898.3, 1);
+    expect(cgCamera(360).s).toBeCloseTo(0.9772, 4);
+  });
+
+  it('对话条先长出来，10 帧后开始打字，打完不多', () => {
+    const line = { text: '一二三', at: 20, x: 0, y: 0, align: 'left' as const };
+    expect(lineState(20, line)).toEqual({ grow: 0, tall: 0, typed: 0 });
+    expect(lineState(30, line).typed).toBe(1);
+    expect(lineState(200, line).typed).toBe(3);
+  });
+
+  it('空的对话条不出、最多 5 条；拖时间轴改出来的时间', () => {
+    const many = { ...cg.defaultParams, lines: Array.from({ length: 7 }, (_, i) => ({ text: i === 1 ? ' ' : `第${i}句`, at: i, x: 0, y: 0, align: 'left' as const })) };
+    expect(cg.toProps(many).lines).toHaveLength(4);
+    const moved = cg.timeline.apply(raw(cg.defaultParams), 'line-1', 'move', 4, 5) as unknown as cg.ChatGuestParams;
+    expect(moved.lines[1]!.at).toBe(4);
   });
 });
