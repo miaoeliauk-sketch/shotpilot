@@ -3,6 +3,8 @@ import * as wm from '../templates/src/word-magnifier/params';
 import { bgCamera, charIn, fgCamera, rollingNumber } from '../templates/src/word-magnifier/WordMagnifier';
 import * as pl from '../templates/src/people-labels/params';
 import { camera as plCamera, reveal } from '../templates/src/people-labels/PeopleLabels';
+import * as tp from '../templates/src/ticket-percent/params';
+import { camera as tpCamera, questionState } from '../templates/src/ticket-percent/TicketPercent';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -59,5 +61,26 @@ describe('人物 · 身份卡片 · 金色词条', () => {
     expect(p.labels).toEqual([{ text: '留下', slot: 'top', at: 30 }]);
     const moved = pl.timeline.apply(raw(pl.defaultParams), 'label-2', 'move', 2, 2.3) as unknown as pl.PeopleLabelsParams;
     expect(moved.labels[2]!.at).toBe(2);
+  });
+});
+
+describe('口播人物 · 提问 · 两个百分比 · 钞票', () => {
+  it('默认按原片：400 帧，提问 50、左 116、右 246、甩走 300、钞票甩出 388', () => {
+    const p = tp.toProps(tp.defaultParams);
+    expect([p.durationInFrames, p.questionAt, p.left.at, p.right.at, p.swapAt, p.moneyOutAt]).toEqual([400, 50, 116, 246, 300, 388]);
+  });
+
+  it('镜头：100 帧 1 倍，慢慢拉远到 0.886，甩走后往右摆到 x 898；甩走时间改了，前面的曲线跟着伸缩', () => {
+    expect(tpCamera(100, 300)).toEqual({ s: 1, x: 640, y: 360 });
+    expect(tpCamera(300, 300).s).toBeCloseTo(0.8857, 4);
+    expect(tpCamera(360, 300).x).toBeCloseTo(898.2, 1);
+    expect(tpCamera(200, 400)).toEqual(tpCamera(150, 300));
+  });
+
+  it('提问条先长出来再打字；钞票甩出去不会早于出现', () => {
+    const q = questionState(50, 50, '一二三四');
+    expect([q.grow, q.typed]).toEqual([0, 0]);
+    expect(questionState(80, 50, '一二三四').typed).toBe(4);
+    expect(tp.toProps({ ...tp.defaultParams, moneyOutAt: 5 }).moneyOutAt).toBe(320);
   });
 });

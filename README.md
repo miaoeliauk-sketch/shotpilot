@@ -260,6 +260,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`card-tags`](templates/src/card-tags/) | 6.7 秒：口播画面压暗，左上斜放一张纸卡片（换页、贴小标签），右边橙色词条弹出来，最后卡片甩出去 | SSIM 0.843 |
 | [`word-magnifier`](templates/src/word-magnifier/) | 14.8 秒：两组压窄大字淡进来、册子飞进来，拉远后两个灰圆各一句说明，最后放大镜移进来、镜片里数字滚上去 | SSIM 0.870 |
 | [`people-labels`](templates/src/people-labels/) | 4.7 秒：灰墙上一张人物照片（脸上可盖 logo），身后两张灰卡片写身份，四周金色词条一个个亮起来 | SSIM 0.908 |
+| [`ticket-percent`](templates/src/ticket-percent/) | 13.3 秒：虚化的人物照片上打出一句提问，两张票和绿、红两个大百分比先后飞进来，甩走后出一叠钞票和银色金额 | SSIM 0.915 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 
