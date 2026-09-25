@@ -460,3 +460,86 @@ describe('聚光圆台 · 上摇到标签页', async () => {
     expect(wrapChars('字'.repeat(40), '19px sans-serif', 300).length).toBeGreaterThan(1);
   });
 });
+
+describe('纸片堆（两个模板共用）', async () => {
+  const { paperPose } = await import('../templates/src/paper-cards/PaperCards');
+
+  it('从起点飞过来，8 帧落到位置上，落地前又小又虚、转得多', () => {
+    const slot = { n: 1, x: 500, y: 400, rot: -10, at: 10, from: [300, 700] as [number, number] };
+    expect(paperPose(slot, 9).visible).toBe(false);
+    const mid = paperPose(slot, 12);
+    expect(mid.scale).toBeLessThan(1);
+    expect(mid.blur).toBeGreaterThan(0);
+    const end = paperPose(slot, 18);
+    expect([end.x, end.y, end.rot, end.scale, end.blur]).toEqual([500, 400, -10, 1, 0]);
+  });
+});
+
+describe('人物 + logo 挡脸 · 标题滑出 · 纸片堆', async () => {
+  const ltc = await import('../templates/src/logo-title-cards/params');
+  const { camera } = await import('../templates/src/logo-title-cards/LogoTitleCards');
+
+  it('默认按原片：第 92 帧飞纸片、第 170 帧出深灰圆，一共 279 帧', () => {
+    const p = ltc.toProps(ltc.defaultParams);
+    expect([p.cardsAt, p.discAt, p.durationInFrames]).toEqual([92, 170, 279]);
+  });
+
+  it('镜头从 1.21 倍拉远到 1 倍，中间再拉远一点又推回来', () => {
+    expect(camera(0).s).toBeCloseTo(1.207, 3);
+    expect(camera(60).s).toBeCloseTo(1.004, 3);
+    expect(camera(160).s).toBeLessThan(camera(250).s);
+  });
+});
+
+describe('文件截图 → 人物 · 金色数字 · 纸片', async () => {
+  const dpc = await import('../templates/src/doc-portrait-count/params');
+  const { docPose, countAt } = await import('../templates/src/doc-portrait-count/DocPortraitCount');
+
+  it('默认按原片：第 142 帧文件滑走、182 帧出数字、346 帧飞纸片，一共 440 帧', () => {
+    const p = dpc.toProps(dpc.defaultParams);
+    expect([p.docOutAt, p.countAt, p.cardsAt, p.durationInFrames]).toEqual([142, 182, 346, 440]);
+  });
+
+  it('文件斜着滑进来、摆正；滑走时越来越虚、出画面', () => {
+    expect(docPose(0, 142).x).toBeLessThan(0);
+    expect(docPose(0, 142).rot).toBeCloseTo(-8, 5);
+    expect(docPose(80, 142).rot).toBe(0);
+    expect(docPose(80, 142).blur).toBe(0);
+    expect(docPose(190, 142).x).toBeGreaterThan(1280 + 500);
+    expect(docPose(165, 142).blur).toBeGreaterThan(5);
+  });
+
+  it('数字从 0 数到目标，8 帧数完', () => {
+    expect(countAt(182, 182, 30)).toBe(0);
+    expect(countAt(186, 182, 30)).toBeGreaterThan(0);
+    expect(countAt(186, 182, 30)).toBeLessThan(30);
+    expect(countAt(190, 182, 30)).toBe(30);
+  });
+});
+
+describe('三个金字 · 金色圆 → 深色新闻页', async () => {
+  const gcn = await import('../templates/src/gold-chars-news/params');
+  const { stripProgress, underlinesByLine } = await import('../templates/src/gold-chars-news/GoldCharsNews');
+
+  it('默认按原片：金字第 8、26、58 帧，第 44 帧升圆，156 帧暗下去，184 帧新闻页，一共 281 帧', () => {
+    const p = gcn.toProps(gcn.defaultParams);
+    expect(p.chars.map((c) => c.at)).toEqual([8, 26, 58]);
+    expect([p.discAt, p.darkAt, p.newsAt, p.durationInFrames]).toEqual([44, 156, 184, 281]);
+  });
+
+  it('金粉落下：每一条在 14 帧内都落到位', () => {
+    for (let i = 0; i < 9; i++) {
+      expect(stripProgress(7, 8, i, 9)).toBe(0);
+      expect(stripProgress(22, 8, i, 9)).toBe(1);
+    }
+  });
+
+  it('重点句每一行各画一条线，从这一行第一个标橙的字画到最后一个', () => {
+    const c = (line: number, x: number, highlight: boolean) => ({ ch: '字', x, center: 100 + line * 58, width: 38, paragraph: 0, index: 0, line, highlight });
+    const lines = underlinesByLine([c(0, 100, false), c(0, 138, true), c(0, 176, true), c(1, 77, true), c(1, 115, false)]);
+    expect(lines).toEqual([
+      { line: 0, x0: 138, x1: 214, center: 100 },
+      { line: 1, x0: 77, x1: 115, center: 158 },
+    ]);
+  });
+});

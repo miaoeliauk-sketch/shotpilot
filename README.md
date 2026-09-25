@@ -250,6 +250,9 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`office-tags`](templates/src/office-tags/) | 9 秒：近景横移 → 全景拉远，墙上灰色大字，牛皮纸标签钉上去拉红线 | SSIM 0.871 |
 | [`nameplate-story`](templates/src/nameplate-story/) | 15.6 秒：公司铭牌 + 人数 → 横甩到第二块铭牌、红线和引语 → 墨刷转场到日期页 | SSIM 0.828 |
 | [`spotlight-detour`](templates/src/spotlight-detour/) | 17 秒：格子纸聚光圆台、金字红字 → 上摇到三个红字标签和粉红大圆 | SSIM 0.811 |
+| [`logo-title-cards`](templates/src/logo-title-cards/) | 9 秒：人物 + logo 挡脸，标题从方块后滑出、画细线框，一叠纸片从手里飞出来 | SSIM 0.841 |
+| [`doc-portrait-count`](templates/src/doc-portrait-count/) | 14.7 秒：文件截图斜着滑进来 → 虚掉滑走露出人物，金色数字从 0 数上去，一排纸片 | SSIM 0.817 |
+| [`gold-chars-news`](templates/src/gold-chars-news/) | 9.4 秒：三个金字像金粉落下拼成、金色大圆升起 → 深色新闻页标题闪进、正文标橙 | SSIM 0.825 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

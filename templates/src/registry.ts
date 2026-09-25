@@ -45,6 +45,12 @@ import { NameplateStory } from './nameplate-story/NameplateStory';
 import * as nameplateStory from './nameplate-story/params';
 import { SpotlightDetour } from './spotlight-detour/SpotlightDetour';
 import * as spotlightDetour from './spotlight-detour/params';
+import { LogoTitleCards } from './logo-title-cards/LogoTitleCards';
+import * as logoTitleCards from './logo-title-cards/params';
+import { DocPortraitCount } from './doc-portrait-count/DocPortraitCount';
+import * as docPortraitCount from './doc-portrait-count/params';
+import { GoldCharsNews } from './gold-chars-news/GoldCharsNews';
+import * as goldCharsNews from './gold-chars-news/params';
 
 /**
  * 工作台里能用的模板。
@@ -173,6 +179,21 @@ export const TEMPLATES: TemplateDef[] = [
     ...spotlightDetour.meta,
     component: SpotlightDetour,
     toProps: (p) => spotlightDetour.toProps(p as unknown as spotlightDetour.SpotlightDetourParams),
+  },
+  {
+    ...logoTitleCards.meta,
+    component: LogoTitleCards,
+    toProps: (p) => logoTitleCards.toProps(p as unknown as logoTitleCards.LogoTitleCardsParams),
+  },
+  {
+    ...docPortraitCount.meta,
+    component: DocPortraitCount,
+    toProps: (p) => docPortraitCount.toProps(p as unknown as docPortraitCount.DocPortraitCountParams),
+  },
+  {
+    ...goldCharsNews.meta,
+    component: GoldCharsNews,
+    toProps: (p) => goldCharsNews.toProps(p as unknown as goldCharsNews.GoldCharsNewsParams),
   },
 ];
 
