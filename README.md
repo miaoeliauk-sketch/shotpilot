@@ -254,6 +254,8 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`doc-portrait-count`](templates/src/doc-portrait-count/) | 14.7 秒：文件截图斜着滑进来 → 虚掉滑走露出人物，金色数字从 0 数上去，一排纸片 | SSIM 0.817 |
 | [`gold-chars-news`](templates/src/gold-chars-news/) | 9.4 秒：三个金字像金粉落下拼成、金色大圆升起 → 深色新闻页标题闪进、正文标橙 | SSIM 0.825 |
 | [`icon-red-words`](templates/src/icon-red-words/) | 5.5 秒：白色圆角图标从下面翻上来，两边红字发着光先后淡进来，身后一条暗带扫出来 | SSIM 0.936 |
+| [`icon-bubbles`](templates/src/icon-bubbles/) | 10.5 秒：网格纸上一行行「图标 + 深色条」，字一个个弹出来，镜头慢慢推近，最后整列歪着滑走 | SSIM 0.902 |
+| [`circle-photos`](templates/src/circle-photos/) | 3.9 秒：网格纸上几张圆形图片一张张落下来，底下是带红引号的白字标签，镜头慢慢拉远 | SSIM 0.926 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

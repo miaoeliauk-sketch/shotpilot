@@ -53,6 +53,10 @@ import { GoldCharsNews } from './gold-chars-news/GoldCharsNews';
 import * as goldCharsNews from './gold-chars-news/params';
 import { IconRedWords } from './icon-red-words/IconRedWords';
 import * as iconRedWords from './icon-red-words/params';
+import { IconBubbles } from './icon-bubbles/IconBubbles';
+import * as iconBubbles from './icon-bubbles/params';
+import { CirclePhotos } from './circle-photos/CirclePhotos';
+import * as circlePhotos from './circle-photos/params';
 
 /**
  * 工作台里能用的模板。
@@ -201,6 +205,16 @@ export const TEMPLATES: TemplateDef[] = [
     ...iconRedWords.meta,
     component: IconRedWords,
     toProps: (p) => iconRedWords.toProps(p as unknown as iconRedWords.IconRedWordsParams),
+  },
+  {
+    ...iconBubbles.meta,
+    component: IconBubbles,
+    toProps: (p) => iconBubbles.toProps(p as unknown as iconBubbles.IconBubblesParams),
+  },
+  {
+    ...circlePhotos.meta,
+    component: CirclePhotos,
+    toProps: (p) => circlePhotos.toProps(p as unknown as circlePhotos.CirclePhotosParams),
   },
 ];
 
