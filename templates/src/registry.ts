@@ -51,6 +51,8 @@ import { DocPortraitCount } from './doc-portrait-count/DocPortraitCount';
 import * as docPortraitCount from './doc-portrait-count/params';
 import { GoldCharsNews } from './gold-chars-news/GoldCharsNews';
 import * as goldCharsNews from './gold-chars-news/params';
+import { IconRedWords } from './icon-red-words/IconRedWords';
+import * as iconRedWords from './icon-red-words/params';
 
 /**
  * 工作台里能用的模板。
@@ -194,6 +196,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...goldCharsNews.meta,
     component: GoldCharsNews,
     toProps: (p) => goldCharsNews.toProps(p as unknown as goldCharsNews.GoldCharsNewsParams),
+  },
+  {
+    ...iconRedWords.meta,
+    component: IconRedWords,
+    toProps: (p) => iconRedWords.toProps(p as unknown as iconRedWords.IconRedWordsParams),
   },
 ];
 

@@ -253,6 +253,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`logo-title-cards`](templates/src/logo-title-cards/) | 9 秒：人物 + logo 挡脸，标题从方块后滑出、画细线框，一叠纸片从手里飞出来 | SSIM 0.841 |
 | [`doc-portrait-count`](templates/src/doc-portrait-count/) | 14.7 秒：文件截图斜着滑进来 → 虚掉滑走露出人物，金色数字从 0 数上去，一排纸片 | SSIM 0.817 |
 | [`gold-chars-news`](templates/src/gold-chars-news/) | 9.4 秒：三个金字像金粉落下拼成、金色大圆升起 → 深色新闻页标题闪进、正文标橙 | SSIM 0.825 |
+| [`icon-red-words`](templates/src/icon-red-words/) | 5.5 秒：白色圆角图标从下面翻上来，两边红字发着光先后淡进来，身后一条暗带扫出来 | SSIM 0.936 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 
