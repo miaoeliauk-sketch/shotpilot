@@ -57,6 +57,8 @@ import { IconBubbles } from './icon-bubbles/IconBubbles';
 import * as iconBubbles from './icon-bubbles/params';
 import { CirclePhotos } from './circle-photos/CirclePhotos';
 import * as circlePhotos from './circle-photos/params';
+import { QuoteBars } from './quote-bars/QuoteBars';
+import * as quoteBars from './quote-bars/params';
 
 /**
  * 工作台里能用的模板。
@@ -215,6 +217,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...circlePhotos.meta,
     component: CirclePhotos,
     toProps: (p) => circlePhotos.toProps(p as unknown as circlePhotos.CirclePhotosParams),
+  },
+  {
+    ...quoteBars.meta,
+    component: QuoteBars,
+    toProps: (p) => quoteBars.toProps(p as unknown as quoteBars.QuoteBarsParams),
   },
 ];
 

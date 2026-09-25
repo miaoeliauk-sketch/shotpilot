@@ -5,6 +5,8 @@ import * as bubbles from '../templates/src/icon-bubbles/params';
 import { cameraScale, exitPose, rowTops, typedCount } from '../templates/src/icon-bubbles/IconBubbles';
 import * as circles from '../templates/src/circle-photos/params';
 import { cameraScale as circleCamera, dropIn, slots } from '../templates/src/circle-photos/CirclePhotos';
+import * as quote from '../templates/src/quote-bars/params';
+import { barReveal, cameraScale as quoteCamera, titleEdge } from '../templates/src/quote-bars/QuoteBars';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -120,5 +122,37 @@ describe('圆形图片 · 红引号标签', () => {
   it('拖动时间轴上的一张改它落下来的时间', () => {
     const moved = circles.timeline.apply(raw(circles.defaultParams), 'item-2', 'move', 2.2, 3) as unknown as circles.CirclePhotosParams;
     expect(moved.items[2]!.at).toBe(2.2);
+  });
+});
+
+describe('人名引文 · 白条金句', () => {
+  it('默认按原片：410 帧，两条白条在第 146、262 帧扫出来', () => {
+    const p = quote.toProps(quote.defaultParams);
+    expect(p.durationInFrames).toBe(410);
+    expect(p.bars.map((b) => b.at)).toEqual([146, 262]);
+    expect(p.highlight).toBe(quote.defaultParams.highlight);
+  });
+
+  it('重点句不在正文里就不标；空的白条不出', () => {
+    const p = quote.toProps({ ...quote.defaultParams, highlight: '不存在的话', bars: [{ text: ' ', at: 1 }, { text: '一句', at: 2 }] });
+    expect(p.highlight).toBe('');
+    expect(p.bars).toEqual([{ text: '一句', at: 60 }]);
+  });
+
+  it('镜头：先拉远到 0.914 倍，最后一条白条出来 8 帧后推回 1.005 倍；白条挪了，推回也跟着挪', () => {
+    expect(quoteCamera(0, 262)).toBeCloseTo(1.005, 4);
+    expect(quoteCamera(45, 262)).toBeCloseTo(1, 4);
+    expect(quoteCamera(270, 262)).toBeCloseTo(0.9143, 4);
+    expect(quoteCamera(405, 262)).toBeCloseTo(1.005, 4);
+    expect(quoteCamera(330, 322)).toBeCloseTo(0.9143, 4);
+  });
+
+  it('标题从左往右扫；白条先在左边 70px 外，斜边每帧往右 32px', () => {
+    expect(titleEdge(0)).toBeLessThan(0);
+    expect(titleEdge(20)).toBeGreaterThan(1280);
+    expect(barReveal(100, 100)).toEqual({ dx: -70, edge: 0 });
+    const later = barReveal(120, 100);
+    expect(later.dx).toBeCloseTo(0, 5);
+    expect(later.edge).toBe(640);
   });
 });
