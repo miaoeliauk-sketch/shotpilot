@@ -321,3 +321,89 @@ describe('翻译金句 · 特写横移', async () => {
     expect(p.closeFrames).toBeCloseTo(51.9, 1);
   });
 });
+
+describe('英文原文特写 · 翻译黑条', async () => {
+  const tweet = await import('../templates/src/tweet-translate/params');
+  const { parseBold, wrapRich, layoutPage, camera, wipeProgress, PAGE } = await import('../templates/src/tweet-translate/TweetTranslate');
+
+  it('默认按原片：第 5、58 帧开始刷黑条，一共 118 帧', () => {
+    const p = tweet.toProps(tweet.defaultParams);
+    expect(p.lines.map((l) => Math.round(l.at))).toEqual([5, 58]);
+    expect(p.durationInFrames).toBe(118);
+  });
+
+  it('**粗体** 拆成粗细两段，换行时粗细跟着单词走', () => {
+    expect(parseBold('a **b c** d')).toEqual([{ text: 'a ', bold: false }, { text: 'b c', bold: true }, { text: ' d', bold: false }]);
+    const lines = wrapRich('word '.repeat(60) + '**bold words**', 400);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines[lines.length - 1]!.some((s) => s.bold)).toBe(true);
+  });
+
+  it('段落之间空一行；黑条压在指定那段的第一行', () => {
+    const layout = layoutPage(['one', 'two'], 1);
+    expect(layout.lines[1]!.baseline - layout.lines[0]!.baseline).toBeCloseTo(PAGE.pitch * 2, 5);
+    expect(layout.anchorBaseline).toBe(layout.lines[1]!.baseline);
+  });
+
+  it('镜头往右下漂，越来越慢；黑条先慢后快再慢', () => {
+    expect(camera(10).y - camera(0).y).toBeGreaterThan(camera(117).y - camera(100).y);
+    expect(wipeProgress(4, 5, 52)).toBe(0);
+    expect(wipeProgress(30, 5, 52) - wipeProgress(25, 5, 52)).toBeGreaterThan(wipeProgress(10, 5, 52) - wipeProgress(5, 5, 52));
+    expect(wipeProgress(57, 5, 52)).toBe(1);
+  });
+});
+
+describe('文章截图 · 黑条涂重点 · 推近', async () => {
+  const art = await import('../templates/src/article-marker/params');
+  const { layoutArticle, articleCamera } = await import('../templates/src/article-marker/ArticleMarker');
+
+  it('默认按原片：第 34 帧涂黑、推近，一共 134 帧', () => {
+    const p = art.toProps(art.defaultParams);
+    expect([p.markAt, p.zoomAt, p.durationInFrames]).toEqual([34, 34, 134]);
+  });
+
+  it('开头从帖子特写拉远到 1 倍；推近最后停在 2.45 倍、要标的那句在画面中间', () => {
+    const p = { pullBack: true, zoomAt: 34, zoomFrames: 54 };
+    expect(articleCamera(0, p, [411, 261]).s).toBeCloseTo(1.2127, 3);
+    expect(articleCamera(31, p, [411, 261]).s).toBeCloseTo(1, 3);
+    const end = articleCamera(88, p, [411, 261]);
+    expect(end.s).toBeCloseTo(2.455, 3);
+    // 文章里的目标点落在画面中心（画面 = pos + s ×（文章坐标 − 画面中心））
+    expect(end.x + end.s * (411 - 640)).toBeCloseTo(640, 3);
+    expect(end.y + end.s * (261 - 360)).toBeCloseTo(360, 3);
+  });
+
+  it('关掉拉远，一开始就是 1 倍', () => {
+    expect(articleCamera(0, { pullBack: false, zoomAt: 34, zoomFrames: 54 }, [411, 261]).s).toBe(1);
+  });
+
+  it('长段落按宽度换行，逗号句号不放行首', () => {
+    const { lines } = layoutArticle(['字'.repeat(80) + '，结尾。']);
+    expect(lines.length).toBeGreaterThan(1);
+    for (const l of lines.slice(1)) expect(/^[，。]/.test(l.text)).toBe(false);
+  });
+});
+
+describe('场景拼贴 · 墙上大字 · 钉标签', async () => {
+  const office = await import('../templates/src/office-tags/params');
+  const { wideCamera } = await import('../templates/src/office-tags/OfficeTags');
+
+  it('默认按原片：第 66 帧切全景，右边标签第 104 帧、左边第 114 帧，一共 270 帧', () => {
+    const p = office.toProps(office.defaultParams);
+    expect(p.cutAt).toBe(66);
+    expect(p.tags.map((t) => t.at)).toEqual([114, 104]);
+    expect(p.durationInFrames).toBe(270);
+  });
+
+  it('全景一开始放大，越来越慢地拉远，最后略小于 1 倍', () => {
+    expect(wideCamera(0).s).toBeCloseTo(1.2676, 3);
+    expect(wideCamera(134).s).toBeCloseTo(1, 3);
+    expect(wideCamera(0).s - wideCamera(20).s).toBeGreaterThan(wideCamera(100).s - wideCamera(120).s);
+    expect(wideCamera(300).s).toBeLessThan(1);
+  });
+
+  it('拖标签块改它钉上去的时间', () => {
+    const next = office.timeline.apply(raw(office.defaultParams), 'tag-1', 'move', 5, 5.6);
+    expect((next.tags as { at: number }[])[1]!.at).toBe(5);
+  });
+});

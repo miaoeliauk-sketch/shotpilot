@@ -35,6 +35,12 @@ import * as newsScreenshot from './news-screenshot/params';
 import { PostTranslate, QuoteCloseup } from './post-translate/PostTranslate';
 import * as postTranslate from './post-translate/params';
 import * as quoteCloseup from './quote-closeup/params';
+import { TweetTranslate } from './tweet-translate/TweetTranslate';
+import * as tweetTranslate from './tweet-translate/params';
+import { ArticleMarker } from './article-marker/ArticleMarker';
+import * as articleMarker from './article-marker/params';
+import { OfficeTags } from './office-tags/OfficeTags';
+import * as officeTags from './office-tags/params';
 
 /**
  * 工作台里能用的模板。
@@ -138,6 +144,21 @@ export const TEMPLATES: TemplateDef[] = [
     ...quoteCloseup.meta,
     component: QuoteCloseup,
     toProps: (p) => quoteCloseup.toProps(p as unknown as quoteCloseup.QuoteCloseupParams),
+  },
+  {
+    ...tweetTranslate.meta,
+    component: TweetTranslate,
+    toProps: (p) => tweetTranslate.toProps(p as unknown as tweetTranslate.TweetTranslateParams),
+  },
+  {
+    ...articleMarker.meta,
+    component: ArticleMarker,
+    toProps: (p) => articleMarker.toProps(p as unknown as articleMarker.ArticleMarkerParams),
+  },
+  {
+    ...officeTags.meta,
+    component: OfficeTags,
+    toProps: (p) => officeTags.toProps(p as unknown as officeTags.OfficeTagsParams),
   },
 ];
 
