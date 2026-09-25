@@ -243,6 +243,8 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`cards-note`](templates/src/cards-note/) | 2.6 秒：两张人物卡片特写，红线相连，中间打字 | SSIM 0.755 |
 | [`verdict-title`](templates/src/verdict-title/) | 4 秒：深色背景白金两行标题闪出、金色弧线、正文快速打字 | SSIM 0.807 |
 | [`news-screenshot`](templates/src/news-screenshot/) | 7 秒：网页正文滚动、黑底黄字标重点、推近 → 配图压下 → 英文标题刷黑配中文翻译 | SSIM 0.797 |
+| [`post-translate`](templates/src/post-translate/) | 6.4 秒：帖子截图斜着滑进来，原文上刷出黑底翻译 → 一刀切到黑条特写、滑到句尾 | SSIM 0.920 |
+| [`quote-closeup`](templates/src/quote-closeup/) | 1.8 秒：黑底白字金句特写，从虚到实、从句首滑到句尾 | SSIM 0.883 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

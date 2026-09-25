@@ -238,3 +238,86 @@ describe('网页新闻截图', async () => {
     expect([p.highlightAt, p.zoomAt, p.photoAt, p.durationInFrames]).toEqual([32, 51, 88, 219]);
   });
 });
+
+describe('帖子截图 · 翻译黑条', async () => {
+  const post = await import('../templates/src/post-translate/params');
+  const { cardPose, barProgress, closeupBarLeft, CLOSE } = await import('../templates/src/post-translate/PostTranslate');
+  const { wrapWords, layoutPost, barTextWidth, BAR } = await import('../templates/src/post-translate/PostCard');
+
+  it('默认按原片：第 51 帧刷黑条、第 140 帧切特写，一共 193 帧（141 + 53，切的那帧是同一帧）', () => {
+    const p = post.toProps(post.defaultParams);
+    expect([p.barAt, p.closeAt, p.durationInFrames]).toEqual([51, 140, 193]);
+  });
+
+  it('关掉特写就不切', () => {
+    expect(post.toProps({ ...post.defaultParams, closeup: false }).closeAt).toBe(-1);
+  });
+
+  it('卡片从左下斜着滑到正中间，越来越慢，停住以后还在慢慢放大', () => {
+    const p = post.toProps(post.defaultParams);
+    const a = cardPose(0, p);
+    const b = cardPose(30, p);
+    const c = cardPose(70, p);
+    expect(a.x).toBeCloseTo(368.2, 0);
+    expect(a.y).toBeCloseTo(577.9, 0);
+    expect(a.rotate).toBeCloseTo(4.77, 1);
+    expect(c.x).toBeCloseTo(639.4, 0);
+    expect(c.y).toBeCloseTo(358.8, 0);
+    expect(b.x - a.x).toBeGreaterThan(c.x - b.x);
+    expect(cardPose(130, p).scale).toBeGreaterThan(c.scale);
+  });
+
+  it('黑条先快后慢刷出来，刷完停在 1', () => {
+    const p = { barAt: 51, barFrames: 73 };
+    expect(barProgress(50, p)).toBe(0);
+    expect(barProgress(60, p) - barProgress(51, p)).toBeGreaterThan(barProgress(124, p) - barProgress(100, p));
+    expect(barProgress(124, p)).toBe(1);
+    expect(barProgress(200, p)).toBe(1);
+  });
+
+  it('句尾是全角标点时，黑条收在字形后面，不留整格', () => {
+    const a = barTextWidth('我不怕苹果');
+    const b = barTextWidth('我不怕苹果。');
+    expect(b - a).toBeLessThan(BAR.size * BAR.squeeze);
+    expect(b).toBeGreaterThan(a);
+  });
+
+  it('英文按单词换行，不拆开单词', () => {
+    const lines = wrapWords('i am not afraid of apple, but i have tremendous respect for them', '20px sans-serif', 200);
+    expect(lines.length).toBeGreaterThan(1);
+    for (const l of lines) expect(l).toBe(l.trim());
+    expect(lines.join(' ')).toBe('i am not afraid of apple, but i have tremendous respect for them');
+  });
+
+  it('上面那条多一行，下面的东西整体往下挪一行', () => {
+    const base = post.toProps(post.defaultParams);
+    const one = layoutPost({ ...base, parent: { ...base.parent, text: 'short' } });
+    const three = layoutPost({ ...base, parent: { ...base.parent, text: 'word '.repeat(80) } });
+    expect(three.parentLines.length).toBeGreaterThan(2);
+    expect(three.y.bar - one.y.bar).toBeCloseTo((three.parentLines.length - 1) * 26, 5);
+  });
+
+  it('特写：从句首滑到句尾（右端停在 x 1100）；句子很短也至少滑 200', () => {
+    const long = 400;
+    expect(closeupBarLeft(0, long, 52)).toBeCloseTo(CLOSE.startLeft, 5);
+    expect(closeupBarLeft(52, long, 52) + long * CLOSE.k).toBeCloseTo(CLOSE.endRight, 5);
+    const short = 60;
+    expect(closeupBarLeft(0, short, 52) - closeupBarLeft(52, short, 52)).toBeCloseTo(200, 5);
+  });
+
+  it('拖特写那段的右边改视频时长', () => {
+    const next = post.timeline.apply(raw(post.defaultParams), 'close', 'end', 4.67, 8);
+    expect(next.duration).toBe(8);
+  });
+});
+
+describe('翻译金句 · 特写横移', async () => {
+  const quote = await import('../templates/src/quote-closeup/params');
+
+  it('只有特写，默认 53 帧、52 帧滑完', () => {
+    const p = quote.toProps(quote.defaultParams);
+    expect(p.closeOnly).toBe(true);
+    expect(p.durationInFrames).toBe(53);
+    expect(p.closeFrames).toBeCloseTo(51.9, 1);
+  });
+});

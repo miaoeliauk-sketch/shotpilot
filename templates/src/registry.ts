@@ -32,6 +32,9 @@ import { CardsNote } from './cards-note/CardsNote';
 import * as cardsNote from './cards-note/params';
 import { NewsScreenshot } from './news-screenshot/NewsScreenshot';
 import * as newsScreenshot from './news-screenshot/params';
+import { PostTranslate, QuoteCloseup } from './post-translate/PostTranslate';
+import * as postTranslate from './post-translate/params';
+import * as quoteCloseup from './quote-closeup/params';
 
 /**
  * 工作台里能用的模板。
@@ -125,6 +128,16 @@ export const TEMPLATES: TemplateDef[] = [
     ...newsScreenshot.meta,
     component: NewsScreenshot,
     toProps: (p) => newsScreenshot.toProps(p as unknown as newsScreenshot.NewsScreenshotParams),
+  },
+  {
+    ...postTranslate.meta,
+    component: PostTranslate,
+    toProps: (p) => postTranslate.toProps(p as unknown as postTranslate.PostTranslateParams),
+  },
+  {
+    ...quoteCloseup.meta,
+    component: QuoteCloseup,
+    toProps: (p) => quoteCloseup.toProps(p as unknown as quoteCloseup.QuoteCloseupParams),
   },
 ];
 
