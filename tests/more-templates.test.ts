@@ -407,3 +407,56 @@ describe('场景拼贴 · 墙上大字 · 钉标签', async () => {
     expect((next.tags as { at: number }[])[1]!.at).toBe(5);
   });
 });
+
+describe('公司铭牌 · 人数 · 引语 · 墨刷日期页', async () => {
+  const story = await import('../templates/src/nameplate-story/params');
+  const { canonTime, CANON, quoteShown } = await import('../templates/src/nameplate-story/NameplateStory');
+
+  it('默认按原片：第 96 帧出人数、150 帧横甩、372 帧墨刷，一共 468 帧', () => {
+    const p = story.toProps(story.defaultParams);
+    expect([p.countAt, p.whipAt, p.brushAt, p.durationInFrames]).toEqual([96, 150, 372, 468]);
+  });
+
+  it('用户改了时间点，各段按比例拉长缩短，时间点对上原片的时间点', () => {
+    const p = { countAt: 120, whipAt: 200, brushAt: 500 };
+    expect(canonTime(0, p)).toBe(0);
+    expect(canonTime(120, p)).toBeCloseTo(CANON.countAt, 5);
+    expect(canonTime(200, p)).toBeCloseTo(CANON.whipAt, 5);
+    expect(canonTime(500, p)).toBeCloseTo(CANON.brushAt, 5);
+    expect(canonTime(510, p)).toBeCloseTo(CANON.brushAt + 10, 5);
+  });
+
+  it('引语一个字一个字打出来，打完停住', () => {
+    const q = { before: '这些人临走前，还拿', key: 'U盘', after: '' };
+    expect(quoteShown(0, 189, q)).toBe(0);
+    expect(quoteShown(0, 215, q)).toBeGreaterThan(0);
+    expect(quoteShown(0, 300, q)).toBe(Array.from(`“${q.before}${q.key}${q.after}”`).length);
+  });
+});
+
+describe('聚光圆台 · 上摇到标签页', async () => {
+  const spot = await import('../templates/src/spotlight-detour/params');
+  const { sceneACamera, panOffset, wrapChars } = await import('../templates/src/spotlight-detour/SpotlightDetour');
+
+  it('默认按原片：第 28 帧金字、76 帧左字、102 帧右字、244 帧上摇、298 帧粉圆，一共 512 帧', () => {
+    const p = spot.toProps(spot.defaultParams);
+    expect([p.centerAt, p.leftAt, p.rightAt, p.panAt, p.circleAt, p.durationInFrames]).toEqual([28, 76, 102, 244, 298, 512]);
+  });
+
+  it('圆台从 1.71 倍拉远，150 帧回到 1 倍', () => {
+    expect(sceneACamera(15).s).toBeCloseTo(1.71, 2);
+    expect(sceneACamera(150).s).toBeCloseTo(1.006, 3);
+    expect(sceneACamera(15).s - sceneACamera(60).s).toBeGreaterThan(sceneACamera(100).s - sceneACamera(145).s);
+  });
+
+  it('往上摇：先慢后快再慢，冲过头一点再回到 720', () => {
+    expect(panOffset(0)).toBe(0);
+    expect(panOffset(20) - panOffset(16)).toBeGreaterThan(panOffset(4) - panOffset(0));
+    expect(Math.max(...[48, 52, 56].map(panOffset))).toBeGreaterThan(720);
+    expect(panOffset(200)).toBe(720);
+  });
+
+  it('标签小字按宽度换行', () => {
+    expect(wrapChars('字'.repeat(40), '19px sans-serif', 300).length).toBeGreaterThan(1);
+  });
+});

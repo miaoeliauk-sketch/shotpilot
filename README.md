@@ -245,6 +245,11 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`news-screenshot`](templates/src/news-screenshot/) | 7 秒：网页正文滚动、黑底黄字标重点、推近 → 配图压下 → 英文标题刷黑配中文翻译 | SSIM 0.797 |
 | [`post-translate`](templates/src/post-translate/) | 6.4 秒：帖子截图斜着滑进来，原文上刷出黑底翻译 → 一刀切到黑条特写、滑到句尾 | SSIM 0.920 |
 | [`quote-closeup`](templates/src/quote-closeup/) | 1.8 秒：黑底白字金句特写，从虚到实、从句首滑到句尾 | SSIM 0.883 |
+| [`tweet-translate`](templates/src/tweet-translate/) | 4 秒：英文原文特写慢慢漂，一行行刷出黑底翻译，重点词变色 | SSIM 0.758 |
+| [`article-marker`](templates/src/article-marker/) | 4.5 秒：从帖子拉远到整篇文章，一句话被黑条涂黑、镜头推上去 | SSIM 0.793 |
+| [`office-tags`](templates/src/office-tags/) | 9 秒：近景横移 → 全景拉远，墙上灰色大字，牛皮纸标签钉上去拉红线 | SSIM 0.871 |
+| [`nameplate-story`](templates/src/nameplate-story/) | 15.6 秒：公司铭牌 + 人数 → 横甩到第二块铭牌、红线和引语 → 墨刷转场到日期页 | SSIM 0.828 |
+| [`spotlight-detour`](templates/src/spotlight-detour/) | 17 秒：格子纸聚光圆台、金字红字 → 上摇到三个红字标签和粉红大圆 | SSIM 0.811 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

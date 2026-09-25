@@ -41,6 +41,10 @@ import { ArticleMarker } from './article-marker/ArticleMarker';
 import * as articleMarker from './article-marker/params';
 import { OfficeTags } from './office-tags/OfficeTags';
 import * as officeTags from './office-tags/params';
+import { NameplateStory } from './nameplate-story/NameplateStory';
+import * as nameplateStory from './nameplate-story/params';
+import { SpotlightDetour } from './spotlight-detour/SpotlightDetour';
+import * as spotlightDetour from './spotlight-detour/params';
 
 /**
  * 工作台里能用的模板。
@@ -159,6 +163,16 @@ export const TEMPLATES: TemplateDef[] = [
     ...officeTags.meta,
     component: OfficeTags,
     toProps: (p) => officeTags.toProps(p as unknown as officeTags.OfficeTagsParams),
+  },
+  {
+    ...nameplateStory.meta,
+    component: NameplateStory,
+    toProps: (p) => nameplateStory.toProps(p as unknown as nameplateStory.NameplateStoryParams),
+  },
+  {
+    ...spotlightDetour.meta,
+    component: SpotlightDetour,
+    toProps: (p) => spotlightDetour.toProps(p as unknown as spotlightDetour.SpotlightDetourParams),
   },
 ];
 
