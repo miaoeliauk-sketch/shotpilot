@@ -73,6 +73,8 @@ import { TwoSides } from './two-sides/TwoSides';
 import * as twoSides from './two-sides/params';
 import { PosterPair } from './poster-pair/PosterPair';
 import * as posterPair from './poster-pair/params';
+import { NotEqual } from './not-equal/NotEqual';
+import * as notEqual from './not-equal/params';
 
 /**
  * 工作台里能用的模板。
@@ -271,6 +273,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...posterPair.meta,
     component: PosterPair,
     toProps: (p) => posterPair.toProps(p as unknown as posterPair.PosterPairParams),
+  },
+  {
+    ...notEqual.meta,
+    component: NotEqual,
+    toProps: (p) => notEqual.toProps(p as unknown as notEqual.NotEqualParams),
   },
 ];
 

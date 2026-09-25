@@ -3,6 +3,8 @@ import * as ts from '../templates/src/two-sides/params';
 import { camera as tsCamera, redProgress, tilePose } from '../templates/src/two-sides/TwoSides';
 import * as pp from '../templates/src/poster-pair/params';
 import { cameraScale as ppCamera, mergePose, typedMiddle } from '../templates/src/poster-pair/PosterPair';
+import * as ne from '../templates/src/not-equal/params';
+import { cameraScale as neCamera, wordsIn, wordsPose } from '../templates/src/not-equal/NotEqual';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -64,5 +66,29 @@ describe('两张海报卡片 · 合在一起 · 右边大字', () => {
     expect(typedMiddle(200, '同一套')).toBe(3);
     const p = pp.toProps({ ...pp.defaultParams, lines: [{ before: '', big: ' ', after: '', at: 1 }, { before: '', big: '留', after: '', at: 2 }] });
     expect(p.lines).toHaveLength(1);
+  });
+});
+
+describe('大字 A ≠ B · 两张海报卡片', () => {
+  it('默认按原片：174 帧，第 104 帧盖上卡片', () => {
+    const p = ne.toProps(ne.defaultParams);
+    expect([p.durationInFrames, p.cardsAt]).toEqual([174, 104]);
+    expect(p.leftCard.title).toBe('搜错文件');
+  });
+
+  it('镜头：大字慢慢拉远，盖卡片时跳回 1.023 倍；开头每个字从 1.38 倍缩回来', () => {
+    expect(neCamera(60, 104)).toBe(1);
+    expect(neCamera(103, 104)).toBeLessThan(0.95);
+    expect(neCamera(104, 104)).toBeCloseTo(1.0229, 4);
+    expect(neCamera(120, 208)).toBe(neCamera(60, 104));
+    expect(wordsPose(0).s).toBeCloseTo(1.38, 5);
+    expect(wordsPose(60)).toEqual({ s: 1, spread: 1, ne: 1 });
+    expect(wordsIn(0)).toBe(0);
+    expect(wordsIn(24)).toBe(1);
+  });
+
+  it('拖时间轴：大字块的尾巴改盖卡片的时间', () => {
+    const moved = ne.timeline.apply(raw(ne.defaultParams), 'words', 'end', 0, 2.5) as unknown as ne.NotEqualParams;
+    expect(moved.cardsAt).toBe(2.5);
   });
 });
