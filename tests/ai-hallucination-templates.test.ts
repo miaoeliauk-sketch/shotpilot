@@ -7,6 +7,8 @@ import * as circles from '../templates/src/circle-photos/params';
 import { cameraScale as circleCamera, dropIn, slots } from '../templates/src/circle-photos/CirclePhotos';
 import * as quote from '../templates/src/quote-bars/params';
 import { barReveal, cameraScale as quoteCamera, titleEdge } from '../templates/src/quote-bars/QuoteBars';
+import * as cards from '../templates/src/card-tags/params';
+import { cardExit, pageState } from '../templates/src/card-tags/CardTags';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -154,5 +156,39 @@ describe('人名引文 · 白条金句', () => {
     const later = barReveal(120, 100);
     expect(later.dx).toBeCloseTo(0, 5);
     expect(later.edge).toBe(640);
+  });
+});
+
+describe('口播压暗 · 斜卡片 · 橙色词条', () => {
+  it('默认按原片：200 帧，第 66、150 帧换页，第 166 帧甩出去；小标签页数从 1 数起', () => {
+    const p = cards.toProps(cards.defaultParams);
+    expect(p.durationInFrames).toBe(200);
+    expect(p.pages.map((pg) => pg.at)).toEqual([0, 66, 150]);
+    expect(p.exitAt).toBe(166);
+    expect(p.labels[0]!.page).toBe(0);
+    expect(p.tags[1]!.accent).toBe('补');
+  });
+
+  it('换页：淡入淡出或者往上滚，8 帧换完', () => {
+    const pages = cards.toProps(cards.defaultParams).pages;
+    expect(pageState(10, pages)).toEqual({ cur: 0, u: 1 });
+    expect(pageState(66, pages)).toEqual({ cur: 1, u: 0 });
+    expect(pageState(74, pages).u).toBe(1);
+    expect(pageState(152, pages).cur).toBe(2);
+  });
+
+  it('甩出去：往左下飞、越转越斜、淡掉', () => {
+    expect(cardExit(100, 166)).toEqual({ dx: 0, dy: 0, rot: -3.9, opacity: 1 });
+    const out = cardExit(190, 166);
+    expect(out.dx).toBeLessThan(-500);
+    expect(out.rot).toBeLessThan(-25);
+    expect(out.opacity).toBe(0);
+  });
+
+  it('词条最多三个，空的不要；拖动卡片的尾巴改甩出去的时间', () => {
+    const p = cards.toProps({ ...cards.defaultParams, tags: [...cards.defaultParams.tags, { text: '第四个', sub: '', accent: '', glow: false, slot: 'top', at: 1 }] });
+    expect(p.tags).toHaveLength(3);
+    const moved = cards.timeline.apply(raw(cards.defaultParams), 'card', 'end', 0, 5.8) as unknown as cards.CardTagsParams;
+    expect(moved.exitAt).toBe(5);
   });
 });

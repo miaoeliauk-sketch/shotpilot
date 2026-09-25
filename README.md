@@ -257,6 +257,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`icon-bubbles`](templates/src/icon-bubbles/) | 10.5 秒：网格纸上一行行「图标 + 深色条」，字一个个弹出来，镜头慢慢推近，最后整列歪着滑走 | SSIM 0.902 |
 | [`circle-photos`](templates/src/circle-photos/) | 3.9 秒：网格纸上几张圆形图片一张张落下来，底下是带红引号的白字标签，镜头慢慢拉远 | SSIM 0.926 |
 | [`quote-bars`](templates/src/quote-bars/) | 13.7 秒：深色网格底上人名标题和引文从左往右扫出来、重点句标金，白条金句一条条斜着扫出来，镜头先拉远再推回 | SSIM 0.851 |
+| [`card-tags`](templates/src/card-tags/) | 6.7 秒：口播画面压暗，左上斜放一张纸卡片（换页、贴小标签），右边橙色词条弹出来，最后卡片甩出去 | SSIM 0.843 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

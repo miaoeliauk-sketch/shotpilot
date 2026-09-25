@@ -59,6 +59,8 @@ import { CirclePhotos } from './circle-photos/CirclePhotos';
 import * as circlePhotos from './circle-photos/params';
 import { QuoteBars } from './quote-bars/QuoteBars';
 import * as quoteBars from './quote-bars/params';
+import { CardTags } from './card-tags/CardTags';
+import * as cardTags from './card-tags/params';
 
 /**
  * 工作台里能用的模板。
@@ -222,6 +224,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...quoteBars.meta,
     component: QuoteBars,
     toProps: (p) => quoteBars.toProps(p as unknown as quoteBars.QuoteBarsParams),
+  },
+  {
+    ...cardTags.meta,
+    component: CardTags,
+    toProps: (p) => cardTags.toProps(p as unknown as cardTags.CardTagsParams),
   },
 ];
 
