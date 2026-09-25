@@ -26,7 +26,7 @@ import { inkMaskUrl } from '../news-headline/ink';
  * 只复刻画面，底部口播字幕不在模板里。
  */
 
-export type SpeechBubble = { text: string; x: number; y: number; width: number; at: number };
+export type SpeechBubble = { text: string; x: number; y: number; width: number; at: number; small?: boolean };
 
 export type PointingInterviewProps = {
   wall: string;
@@ -83,8 +83,11 @@ const B_T = [0, 4, 8, 12, 22, 32, 44, 62, 82, 102, 122, 142, 162];
 const B_S = [1.86, 1.84, 1.8, 1.76, 1.7, 1.58, 1.47, 1.36, 1.23, 1.13, 1.06, 1.01, 0.99];
 const B_ANCHOR = { x: 610, y: 365 };
 const PEOPLE_BOX = { left: 400, top: 210, width: 420, height: 310 };
-/** 对话框：高 46，字 22px，展开 18 帧，打字每个字 1 帧 */
-const BUBBLE = { height: 46, font: 22, grow: 18, perChar: 1, line: 30 };
+/**
+ * 对话框（第 300 帧量的）：高 46 的胶囊，两头全圆；字 25px、偏粗、带一点白色光晕，几乎顶到左边；
+ * 胶囊外面一圈淡淡的冷色光边。展开 18 帧，打字每个字 1 帧。上面那个对话框字小一号、灰一点，可以两行。
+ */
+const BUBBLE = { height: 46, font: 25, smallFont: 23, grow: 18, perChar: 1, line: 30, padding: 9 };
 
 export const PointingInterview: React.FC<PointingInterviewProps> = (p) => {
   const frame = useCurrentFrame();
@@ -105,7 +108,7 @@ export const PointingInterview: React.FC<PointingInterviewProps> = (p) => {
           <SceneA p={p} frame={frame} />
         </AbsoluteFill>
       )}
-      <Img src={bundledUrl('doc-highlight/scratches.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.35 }} />
+      <Img src={bundledUrl('doc-highlight/scratches.png')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.15 }} />
     </AbsoluteFill>
   );
 };
@@ -210,7 +213,7 @@ const SceneB: React.FC<{ p: PointingInterviewProps; frame: number }> = ({ p, fra
         </div>
       </div>
       {/* 地面：从背墙底边往前铺开，桌子底下一团暗影 */}
-      <div style={{ position: 'absolute', left: 0, top: 0, width: 1280, height: 1100, background: 'linear-gradient(to bottom, #6f6f6f, #a9a9a9 60%)', clipPath: 'polygon(420px 441px, 856px 441px, 1180px 1100px, 60px 1100px)' }} />
+      <div style={{ position: 'absolute', left: 0, top: 0, width: 1280, height: 1100, background: 'linear-gradient(to bottom, #7c7c7c, #a2a2a2 35%, #b4b4b4 70%)', clipPath: 'polygon(420px 441px, 856px 441px, 1375px 1100px, -140px 1100px)' }} />
       <div style={{ position: 'absolute', left: 400, top: 420, width: 460, height: 170, borderRadius: '50%', background: 'radial-gradient(closest-side, rgba(20,20,20,0.9), rgba(20,20,20,0))' }} />
       <Img src={assetUrl(p.people)} style={{ position: 'absolute', left: PEOPLE_BOX.left, top: PEOPLE_BOX.top, width: PEOPLE_BOX.width, height: PEOPLE_BOX.height, objectFit: 'contain', objectPosition: 'center bottom' }} />
       {p.bubbles.map((b, i) => <BubbleView key={i} b={b} t={frame - b.at} />)}
@@ -218,27 +221,32 @@ const SceneB: React.FC<{ p: PointingInterviewProps; frame: number }> = ({ p, fra
   );
 };
 
-/** 对话框：从左往右展开，字一个一个打出来；太长自动换行 */
+/** 对话框：从左往右展开，字一个一个打出来；宽度放不下就换行（上面那个是两行） */
 const BubbleView: React.FC<{ b: SpeechBubble; t: number }> = ({ b, t }) => {
   if (t < 0) return null;
   const grow = Easing.out(Easing.cubic)(interpolate(t, [0, BUBBLE.grow], [0, 1], clamp));
   const chars = Array.from(b.text);
   const shown = Math.max(0, Math.floor((t - 3) / BUBBLE.perChar));
-  const perLine = Math.max(1, Math.floor((b.width - 28) / BUBBLE.font));
+  const small = b.small ?? false;
+  const font = small ? BUBBLE.smallFont : BUBBLE.font;
+  const perLine = Math.max(1, Math.floor((b.width - BUBBLE.padding * 2) / font));
   const lines = Math.max(1, Math.ceil(chars.length / perLine));
   const height = BUBBLE.height + (lines - 1) * BUBBLE.line;
+  const radius = lines > 1 ? 16 : BUBBLE.height / 2;
   return (
     <div
       style={{
-        position: 'absolute', left: b.x, top: b.y, width: b.width, height, borderRadius: 14,
-        backgroundColor: 'rgba(22,22,22,0.92)', boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
-        clipPath: `inset(0 ${(1 - grow) * 100}% 0 0 round 14px)`,
+        position: 'absolute', left: b.x, top: b.y, width: b.width, height, borderRadius: radius,
+        backgroundColor: b.small ? 'rgba(44,44,46,0.86)' : 'rgba(24,24,26,0.94)',
+        boxShadow: '0 0 0 1.5px rgba(150,160,190,0.28), 0 0 12px rgba(190,200,240,0.28), 0 6px 14px rgba(0,0,0,0.4)',
+        clipPath: `inset(-20px ${(1 - grow) * 100}% -20px -20px round ${radius}px)`,
       }}
     >
       <div
         style={{
-          position: 'absolute', left: 14, top: (BUBBLE.height - BUBBLE.line) / 2, width: b.width - 28, lineHeight: `${BUBBLE.line}px`,
-          fontFamily: HEAVY, fontSize: BUBBLE.font, color: '#e4e4e4', wordBreak: 'break-all', whiteSpace: 'pre-wrap',
+          position: 'absolute', left: BUBBLE.padding, top: (BUBBLE.height - BUBBLE.line) / 2, width: b.width - BUBBLE.padding * 2, lineHeight: `${BUBBLE.line}px`,
+          fontFamily: HEAVY, fontSize: font, fontWeight: small ? 400 : 500, color: small ? '#d2d2d2' : '#ededed', letterSpacing: small ? 0 : -0.3,
+          textShadow: small ? undefined : '0 0 6px rgba(255,255,255,0.35)', wordBreak: 'break-all', whiteSpace: 'pre-wrap', overflow: 'hidden', height: height - (BUBBLE.height - BUBBLE.line),
         }}
       >
         {chars.slice(0, shown).join('')}

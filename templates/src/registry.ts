@@ -16,6 +16,12 @@ import { PhotoTitle } from './photo-title/PhotoTitle';
 import * as photoTitle from './photo-title/params';
 import { PointingInterview } from './pointing-interview/PointingInterview';
 import * as pointingInterview from './pointing-interview/params';
+import { DropTitle } from './drop-title/DropTitle';
+import * as dropTitle from './drop-title/params';
+import { ClauseTypewriter } from './clause-typewriter/ClauseTypewriter';
+import * as clauseTypewriter from './clause-typewriter/params';
+import { OrbitLabels } from './orbit-labels/OrbitLabels';
+import * as orbitLabels from './orbit-labels/params';
 
 /**
  * 工作台里能用的模板。
@@ -69,6 +75,21 @@ export const TEMPLATES: TemplateDef[] = [
     ...pointingInterview.meta,
     component: PointingInterview,
     toProps: (p) => pointingInterview.toProps(p as unknown as pointingInterview.PointingInterviewParams),
+  },
+  {
+    ...dropTitle.meta,
+    component: DropTitle,
+    toProps: (p) => dropTitle.toProps(p as unknown as dropTitle.DropTitleParams),
+  },
+  {
+    ...clauseTypewriter.meta,
+    component: ClauseTypewriter,
+    toProps: (p) => clauseTypewriter.toProps(p as unknown as clauseTypewriter.ClauseTypewriterParams),
+  },
+  {
+    ...orbitLabels.meta,
+    component: OrbitLabels,
+    toProps: (p) => orbitLabels.toProps(p as unknown as orbitLabels.OrbitLabelsParams),
   },
 ];
 

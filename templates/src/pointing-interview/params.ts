@@ -25,10 +25,10 @@ export type PointingInterviewParams = {
 };
 
 /** 对话框放在哪（场景二的坐标，第 300 帧量的） */
-const SLOTS: Record<BubbleParams['side'], { x: number; y: number; width: number }> = {
-  right: { x: 750, y: 250, width: 312 },
-  left: { x: 130, y: 318, width: 300 },
-  top: { x: 447, y: 118, width: 384 },
+const SLOTS: Record<BubbleParams['side'], { x: number; y: number; width: number; small?: boolean }> = {
+  right: { x: 753, y: 250, width: 306 },
+  left: { x: 135, y: 319, width: 304 },
+  top: { x: 447, y: 118, width: 302, small: true },
 };
 
 export const defaultParams: PointingInterviewParams = {
@@ -180,7 +180,7 @@ export const meta: TemplateMeta = {
   id: 'pointing-interview',
   name: '指向人物标题 · 对话场景',
   description: '人物指向一组逐字刷出的标题，深色竖条落下衬出关键词；笔刷转场到对话场景，对话框依次展开打字',
-  origin: '复刻自一条新闻解读视频里的两个镜头，和原片的相似度 84.0%（人物用原片抠图比）',
+  origin: '复刻自一条新闻解读视频里的两个镜头，和原片的相似度 84.8%（人物用原片抠图比）',
   width: 1280,
   height: 720,
   fps: FPS,

@@ -23,6 +23,8 @@ describe('模板注册表', () => {
     expect(frames['product-bubbles']).toBe(111);
     expect(frames['photo-title']).toBe(196);
     expect(frames['pointing-interview']).toBe(333);
+    expect(frames['clause-typewriter']).toBe(156);
+    expect(frames['orbit-labels']).toBe(450);
   });
 });
 
@@ -78,7 +80,8 @@ describe('闪白切换 · 竖排标题', () => {
 describe('指向人物 · 对话场景', () => {
   it('对话框按「放在哪」换算成场景二里的位置', () => {
     const p = pointing.toProps(pointing.defaultParams);
-    expect(p.bubbles.map((b) => [b.x, b.y])).toEqual([[750, 250], [130, 318], [447, 118]]);
+    expect(p.bubbles.map((b) => [b.x, b.y])).toEqual([[753, 250], [135, 319], [447, 118]]);
+    expect(p.bubbles[2]!.small).toBe(true);
     expect(p.switchAt).toBe(156);
   });
 
@@ -87,5 +90,58 @@ describe('指向人物 · 对话场景', () => {
     expect(next.bubbles[0]!.at).toBeCloseTo(6.8, 5);
     const moved = pointing.timeline.apply(raw(pointing.defaultParams), 'bubble-1', 'move', 1, 2) as unknown as pointing.PointingInterviewParams;
     expect(moved.bubbles[1]!.at).toBeCloseTo(5.2, 5);
+  });
+});
+
+describe('逐字砸下的标题', async () => {
+  const { charStart } = await import('../templates/src/drop-title/DropTitle');
+  const drop = await import('../templates/src/drop-title/params');
+
+  it('4 个字照原片的顺序：先第 1、3 个，再第 2、4 个', () => {
+    expect([0, 1, 2, 3].map((i) => charStart(i, 4))).toEqual([0, 11, 6, 12]);
+  });
+
+  it('别的字数也是单数位先出来', () => {
+    const starts = Array.from({ length: 6 }, (_, i) => charStart(i, 6));
+    expect(starts[0]).toBeLessThan(starts[1]!);
+    expect(starts[2]).toBeLessThan(starts[1]!);
+  });
+
+  it('默认复现原片 118 帧，第 3 帧出字', () => {
+    const p = drop.toProps(drop.defaultParams);
+    expect([p.durationInFrames, p.startAt]).toEqual([118, 3]);
+  });
+});
+
+describe('条文打字', async () => {
+  const clause = await import('../templates/src/clause-typewriter/params');
+
+  it('默认每秒 20 个字（每 1.5 帧一个），第 23 帧开始打、第 76 帧划重点', () => {
+    const p = clause.toProps(clause.defaultParams);
+    expect(p.framesPerChar).toBeCloseTo(1.5, 5);
+    expect([p.typeAt, p.highlightAt]).toEqual([23, 76]);
+  });
+
+  it('拖打字块的右边改速度：最后一个字正好在那里打完', () => {
+    const p = clause.defaultParams;
+    const next = clause.timeline.apply(raw(p), 'type', 'end', 0, p.typeAt + 2) as unknown as typeof p;
+    expect(next.typeSpeed).toBe(Math.round(Array.from(p.body).length / 2));
+  });
+});
+
+describe('环绕标签', async () => {
+  const { orbitProgress } = await import('../templates/src/orbit-labels/OrbitLabels');
+  const orbit = await import('../templates/src/orbit-labels/params');
+  const labels = orbit.toProps(orbit.defaultParams).labels;
+
+  it('默认按原片：标签在第 63、135、201 帧出现', () => {
+    expect(labels.map((l) => l.at)).toEqual([63, 135, 201]);
+  });
+
+  it('椭圆从第一个标签开始，经过右 → 左 → 上，最后一个之后画满一圈', () => {
+    expect(orbitProgress(62, labels)).toBe(0);
+    expect(orbitProgress(135, labels)).toBeCloseTo(0.5, 5);
+    expect(orbitProgress(201, labels)).toBeCloseTo(0.75, 5);
+    expect(orbitProgress(201 + 35, labels)).toBe(1);
   });
 });
