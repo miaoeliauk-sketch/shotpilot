@@ -63,6 +63,8 @@ import { CardTags } from './card-tags/CardTags';
 import * as cardTags from './card-tags/params';
 import { WordMagnifier } from './word-magnifier/WordMagnifier';
 import * as wordMagnifier from './word-magnifier/params';
+import { PeopleLabels } from './people-labels/PeopleLabels';
+import * as peopleLabels from './people-labels/params';
 
 /**
  * 工作台里能用的模板。
@@ -236,6 +238,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...wordMagnifier.meta,
     component: WordMagnifier,
     toProps: (p) => wordMagnifier.toProps(p as unknown as wordMagnifier.WordMagnifierParams),
+  },
+  {
+    ...peopleLabels.meta,
+    component: PeopleLabels,
+    toProps: (p) => peopleLabels.toProps(p as unknown as peopleLabels.PeopleLabelsParams),
   },
 ];
 
