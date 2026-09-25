@@ -61,6 +61,8 @@ import { QuoteBars } from './quote-bars/QuoteBars';
 import * as quoteBars from './quote-bars/params';
 import { CardTags } from './card-tags/CardTags';
 import * as cardTags from './card-tags/params';
+import { WordMagnifier } from './word-magnifier/WordMagnifier';
+import * as wordMagnifier from './word-magnifier/params';
 
 /**
  * 工作台里能用的模板。
@@ -229,6 +231,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...cardTags.meta,
     component: CardTags,
     toProps: (p) => cardTags.toProps(p as unknown as cardTags.CardTagsParams),
+  },
+  {
+    ...wordMagnifier.meta,
+    component: WordMagnifier,
+    toProps: (p) => wordMagnifier.toProps(p as unknown as wordMagnifier.WordMagnifierParams),
   },
 ];
 
