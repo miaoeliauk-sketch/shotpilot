@@ -270,6 +270,8 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 
+模板示例图里的人物插画来自 [Open Peeps](https://www.openpeeps.com/)（Pablo Stanley 绘制，CC0 公共领域，可以免费商用），按场景重新上色、摆位；对话镜头里的剪影按真人头身比例画。
+
 ## 导出
 
 | 格式 | 用途 |
