@@ -267,6 +267,11 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`not-equal`](templates/src/not-equal/) | 5.8 秒：一排很高的压窄大字「A ≠ B」、≠ 发红光，之后大字变虚、两张海报卡片盖在两边 | SSIM 0.853 |
 | [`record-sheet`](templates/src/record-sheet/) | 5.1 秒：一张发黄的旧档案表转着飞进来铺满画面，前四栏一个字一个字写上内容，镜头慢慢推近 | SSIM 0.823 |
 | [`title-number-brand`](templates/src/title-number-brand/) | 10 秒：一组斑驳的大标题（可垫口播画面，默认直接出现在深色底上）→ 超大数字一位接一位缩回来、跟上单位和注释 → 两个月亮、背后淡淡的大字，中间品牌名从虚到实 | SSIM 0.894 |
+| [`chrome-title`](templates/src/chrome-title/) | 2.5 秒：暗暗的视频画面上一行金属拉丝质感的斜体大标题，上面疏排小字、下面等宽英文，整组慢慢放大 | SSIM 0.924 |
+| [`article-swap`](templates/src/article-swap/) | 3.2 秒：深蓝网点底上一篇文章，标题一个字一个字打出来、后半截压米黄高亮条，正文一行行扫出来；第二篇从大缩回来盖上去 | SSIM 0.810 |
+| [`prompt-box`](templates/src/prompt-box/) | 5.4 秒：墨绿底上一个圆角提示词框，镜头先贴着左上角扫过再拉开，提示词一个字一个字打出来，框线沿上下两边爬过去再收掉 | SSIM 0.942 |
+| [`compare-table`](templates/src/compare-table/) | 3 秒：墨绿底上一张两列对比表，每一格一个接一个从虚到实亮起来，数值后面跟绿色上箭头 / 红色下箭头，最后注释扫出来 | SSIM 0.898 |
+| [`ranking-logos`](templates/src/ranking-logos/) | 6 秒：方格纸上一张排行榜像翻书一样翻过来，然后往下推走，一串 logo 一张接一张硬切（原片开头的口播已去掉） | SSIM 0.880 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

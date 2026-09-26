@@ -79,6 +79,16 @@ import { RecordSheet } from './record-sheet/RecordSheet';
 import * as recordSheet from './record-sheet/params';
 import { TitleNumberBrand } from './title-number-brand/TitleNumberBrand';
 import * as titleNumberBrand from './title-number-brand/params';
+import { ChromeTitle } from './chrome-title/ChromeTitle';
+import * as chromeTitle from './chrome-title/params';
+import { ArticleSwap } from './article-swap/ArticleSwap';
+import * as articleSwap from './article-swap/params';
+import { PromptBox } from './prompt-box/PromptBox';
+import * as promptBox from './prompt-box/params';
+import { CompareTable } from './compare-table/CompareTable';
+import * as compareTable from './compare-table/params';
+import { RankingLogos } from './ranking-logos/RankingLogos';
+import * as rankingLogos from './ranking-logos/params';
 
 /**
  * 工作台里能用的模板。
@@ -292,6 +302,31 @@ export const TEMPLATES: TemplateDef[] = [
     ...titleNumberBrand.meta,
     component: TitleNumberBrand,
     toProps: (p) => titleNumberBrand.toProps(p as unknown as titleNumberBrand.TitleNumberBrandParams),
+  },
+  {
+    ...chromeTitle.meta,
+    component: ChromeTitle,
+    toProps: (p) => chromeTitle.toProps(p as unknown as chromeTitle.ChromeTitleParams),
+  },
+  {
+    ...articleSwap.meta,
+    component: ArticleSwap,
+    toProps: (p) => articleSwap.toProps(p as unknown as articleSwap.ArticleSwapParams),
+  },
+  {
+    ...promptBox.meta,
+    component: PromptBox,
+    toProps: (p) => promptBox.toProps(p as unknown as promptBox.PromptBoxParams),
+  },
+  {
+    ...compareTable.meta,
+    component: CompareTable,
+    toProps: (p) => compareTable.toProps(p as unknown as compareTable.CompareTableParams),
+  },
+  {
+    ...rankingLogos.meta,
+    component: RankingLogos,
+    toProps: (p) => rankingLogos.toProps(p as unknown as rankingLogos.RankingLogosParams),
   },
 ];
 

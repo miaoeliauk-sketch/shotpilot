@@ -46,3 +46,19 @@ export const TiltShift: React.FC<{ cx: number; k: number; power?: number; far?: 
     </>
   );
 };
+
+/**
+ * 两边虚、中间实：一份清楚的、一份虚的，用互补的横向渐变遮罩叠起来。
+ * |x − cx| < inner 全清楚，> outer 全虚，中间线性过渡。和 TiltShift 不同，中间这一段下面没有虚的那份，字边不会发毛。
+ */
+export const EdgeBlur: React.FC<{ cx: number; inner: number; outer: number; blur: number; farStyle?: React.CSSProperties; width?: number; children: React.ReactNode }> = ({ cx, inner, outer, blur, farStyle, width = 1280, children }) => {
+  const pct = (x: number) => `${((x / width) * 100).toFixed(2)}%`;
+  const far = `linear-gradient(to right, #000 ${pct(cx - outer)}, transparent ${pct(cx - inner)}, transparent ${pct(cx + inner)}, #000 ${pct(cx + outer)})`;
+  const near = `linear-gradient(to right, transparent ${pct(cx - outer)}, #000 ${pct(cx - inner)}, #000 ${pct(cx + inner)}, transparent ${pct(cx + outer)})`;
+  return (
+    <>
+      <AbsoluteFill style={{ filter: `blur(${blur}px)`, WebkitMaskImage: far, maskImage: far, ...farStyle }}>{children}</AbsoluteFill>
+      <AbsoluteFill style={{ WebkitMaskImage: near, maskImage: near }}>{children}</AbsoluteFill>
+    </>
+  );
+};
