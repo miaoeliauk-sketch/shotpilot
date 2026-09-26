@@ -266,6 +266,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`poster-pair`](templates/src/poster-pair/) | 10.5 秒：口播画面上两张海报卡片出来、背景换成灰墙、中间打出一句话，右边那张叠过去，右边一行行大字淡进来 | SSIM 0.859 |
 | [`not-equal`](templates/src/not-equal/) | 5.8 秒：一排很高的压窄大字「A ≠ B」、≠ 发红光，之后大字变虚、两张海报卡片盖在两边 | SSIM 0.853 |
 | [`record-sheet`](templates/src/record-sheet/) | 5.1 秒：一张发黄的旧档案表转着飞进来铺满画面，前四栏一个字一个字写上内容，镜头慢慢推近 | SSIM 0.823 |
+| [`title-number-brand`](templates/src/title-number-brand/) | 10 秒：一组斑驳的大标题（可垫口播画面，默认直接出现在深色底上）→ 超大数字一位接一位缩回来、跟上单位和注释 → 两个月亮、背后淡淡的大字，中间品牌名从虚到实 | SSIM 0.894 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

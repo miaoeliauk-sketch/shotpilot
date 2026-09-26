@@ -77,6 +77,8 @@ import { NotEqual } from './not-equal/NotEqual';
 import * as notEqual from './not-equal/params';
 import { RecordSheet } from './record-sheet/RecordSheet';
 import * as recordSheet from './record-sheet/params';
+import { TitleNumberBrand } from './title-number-brand/TitleNumberBrand';
+import * as titleNumberBrand from './title-number-brand/params';
 
 /**
  * 工作台里能用的模板。
@@ -285,6 +287,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...recordSheet.meta,
     component: RecordSheet,
     toProps: (p) => recordSheet.toProps(p as unknown as recordSheet.RecordSheetParams),
+  },
+  {
+    ...titleNumberBrand.meta,
+    component: TitleNumberBrand,
+    toProps: (p) => titleNumberBrand.toProps(p as unknown as titleNumberBrand.TitleNumberBrandParams),
   },
 ];
 

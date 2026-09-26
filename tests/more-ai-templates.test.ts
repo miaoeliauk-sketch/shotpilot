@@ -7,6 +7,8 @@ import * as ne from '../templates/src/not-equal/params';
 import { cameraScale as neCamera, wordsIn, wordsPose } from '../templates/src/not-equal/NotEqual';
 import * as rs from '../templates/src/record-sheet/params';
 import { sheetPose, written } from '../templates/src/record-sheet/RecordSheet';
+import * as tnb from '../templates/src/title-number-brand/params';
+import { brandBlur, brandLayout, camera1, camera2, camera3, digitFill, digitGradient, digitScale } from '../templates/src/title-number-brand/TitleNumberBrand';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -129,5 +131,70 @@ describe('旧档案表 · 飞进来 · 一栏栏填写', () => {
     const moved = rs.timeline.apply(raw(rs.defaultParams), 'cam', 'move', 1, 3) as unknown as rs.RecordSheetParams;
     expect(moved.enterAt).toBe(1);
     expect(moved.fields[0]!.at).toBeCloseTo(1.53, 5);
+  });
+});
+
+describe('开场大标题 · 超大数字 · 发光品牌名', () => {
+  it('默认不放口播画面：标题直接出现在深色底上；100 帧换数字、173 帧切品牌名、298 帧结束，一共 300 帧', () => {
+    const p = tnb.toProps(tnb.defaultParams);
+    expect(p.aroll).toBe('');
+    expect([p.numberAt, p.brandAt, p.brandEnd, p.durationInFrames]).toEqual([100, 173, 298, 300]);
+    expect(p.note.split('\n')).toHaveLength(2);
+  });
+
+  it('放了口播画面可以拉长，后面接着放口播；最短也要放到品牌名结束', () => {
+    expect(tnb.toProps({ ...tnb.defaultParams, aroll: 'a.mp4', duration: 11.9 }).durationInFrames).toBe(357);
+    expect(tnb.toProps({ ...tnb.defaultParams, duration: 3 }).durationInFrames).toBe(300);
+  });
+
+  it('开头大标题全空着：直接从数字开始，后面的时间一起往前挪', () => {
+    const p = tnb.toProps({ ...tnb.defaultParams, top: '', mid: ' ', big: '', side: '' });
+    expect([p.numberAt, p.brandAt, p.brandEnd]).toEqual([0, 73, 198]);
+    expect(p.durationInFrames).toBe(200);
+  });
+
+  it('镜头：开头 1.333 倍拉到 1 倍；数字段 1.62 倍拉到 1 倍、切走前越拉越快；品牌名段结束前匀速推近', () => {
+    expect(camera1(0)).toBeCloseTo(1.3335, 4);
+    expect(camera1(60)).toBe(1);
+    expect(camera2(0, -73)).toBeCloseTo(1.62, 4);
+    expect(camera2(50, -23)).toBe(1);
+    expect(camera2(72, -1)).toBeCloseTo(0.8008, 2);
+    expect(camera3(0, -125)).toBeCloseTo(1.4149, 4);
+    expect(camera3(77, -48)).toBe(1);
+    expect(camera3(121, -4)).toBeCloseTo(1.2976, 1);
+  });
+
+  it('数字一位接一位从 4.5 倍缩回来；很大的那位已经填上色；品牌名从 10px 虚到实', () => {
+    expect(digitScale(0, 4)).toBe(4.5);
+    expect(digitScale(30, 0)).toBeCloseTo(1, 2);
+    expect(digitScale(8, 1)).toBeLessThan(digitScale(8, 3));
+    expect(digitFill(0, 0)).toBe(0);
+    expect(digitFill(2, 4)).toBeCloseTo(0.45, 5);
+    expect(digitFill(40, 4)).toBe(1);
+    expect(digitGradient(2, 5)).toContain('rgb(157,199,223)');
+    expect(digitGradient(0, 1)).toContain('rgb(157,199,223)');
+    expect(brandBlur(0)).toBe(10);
+    expect(brandBlur(60)).toBe(0);
+  });
+
+  it('品牌名一行以画面中心对齐；没有蓝字就不留菱形点的位置', () => {
+    const w = (t: string) => t.length * 100;
+    const a = brandLayout('KIMI', 'K3', w);
+    const b = brandLayout('KIMI', '', w);
+    // 白字 390 宽（字距 −2.5）、菱形点连两边空 30、蓝字 195：整行 615，中心在 640（再往右挪 2）
+    expect(a.left).toBeCloseTo(334.5, 5);
+    expect(a.dot).toBeCloseTo(733.5, 5);
+    expect(a.accentLeft).toBeCloseTo(754.5, 5);
+    expect(b.left).toBeCloseTo(640 - 390 / 2 + 2, 5);
+  });
+
+  it('拖时间轴：品牌名块的两头改切进来和结束的时间，结束往后拖会顺带拉长视频', () => {
+    const moved = tnb.timeline.apply(raw(tnb.defaultParams), 'brand', 'start', 6.5, 9.93) as unknown as tnb.TitleNumberBrandParams;
+    expect(moved.brandAt).toBe(6.5);
+    const longer = tnb.timeline.apply(raw(tnb.defaultParams), 'brand', 'end', 5.77, 12) as unknown as tnb.TitleNumberBrandParams;
+    expect(longer.brandEnd).toBe(12);
+    expect(longer.duration).toBeGreaterThan(12);
+    const tracks = tnb.timeline.tracks(raw(tnb.defaultParams));
+    expect(tracks[0]!.items.map((i) => i.id)).toEqual(['title', 'number', 'brand']);
   });
 });
