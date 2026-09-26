@@ -271,7 +271,10 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`article-swap`](templates/src/article-swap/) | 3.2 秒：深蓝网点底上一篇文章，标题一个字一个字打出来、后半截压米黄高亮条，正文一行行扫出来；第二篇从大缩回来盖上去 | SSIM 0.810 |
 | [`prompt-box`](templates/src/prompt-box/) | 5.4 秒：墨绿底上一个圆角提示词框，镜头先贴着左上角扫过再拉开，提示词一个字一个字打出来，框线沿上下两边爬过去再收掉 | SSIM 0.942 |
 | [`compare-table`](templates/src/compare-table/) | 3 秒：墨绿底上一张两列对比表，每一格一个接一个从虚到实亮起来，数值后面跟绿色上箭头 / 红色下箭头，最后注释扫出来 | SSIM 0.898 |
-| [`ranking-logos`](templates/src/ranking-logos/) | 6 秒：方格纸上一张排行榜像翻书一样翻过来，然后往下推走，一串 logo 一张接一张硬切（原片开头的口播已去掉） | SSIM 0.880 |
+| [`ranking-logos`](templates/src/ranking-logos/) | 6 秒：方格纸上一张排行榜像翻书一样翻过来，然后往下推走，一串 logo 一张接一张硬切，深色底的那张带发光线拧成的螺旋（原片开头的口播已去掉） | SSIM 0.867 |
+| [`marathon-title`](templates/src/marathon-title/) | 4.4 秒：暗暗的视频画面上一行金属拉丝大标题从上面落下来、一团烟雾扫过，然后放大、上面淡出一行小字，最后往下甩走 | SSIM 0.938 |
+| [`page-scroll-labels`](templates/src/page-scroll-labels/) | 5.6 秒：一张很长的深色网页截图从最底下快速滚到顶，停住后推近，两条浅灰翻译标签从左往右长出来，最后往上甩走 | SSIM 0.869 |
+| [`story-cards`](templates/src/story-cards/) | 13.2 秒：浅灰纸上一张张「图 + 一句话」的圆角卡片从四周滑进来、字一个个打出来，最后中间黑圆长大、细线连到每张卡片 | SSIM 0.855 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

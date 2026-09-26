@@ -8,7 +8,13 @@ import { arms, camera as pbCamera, typed } from '../templates/src/prompt-box/Pro
 import * as cmp from '../templates/src/compare-table/params';
 import { cameraScale as tableScale, cellIn } from '../templates/src/compare-table/CompareTable';
 import * as rl from '../templates/src/ranking-logos/params';
-import { barLength, dropIn, flip, logoStarts, pushDown } from '../templates/src/ranking-logos/RankingLogos';
+import { barLength, dropIn, flip, linePoint, logoStarts, pushDown } from '../templates/src/ranking-logos/RankingLogos';
+import * as mt from '../templates/src/marathon-title/params';
+import { camera as mtCamera, titleIn } from '../templates/src/marathon-title/MarathonTitle';
+import * as psl from '../templates/src/page-scroll-labels/params';
+import { labelWipe, scrollOffset, zoom } from '../templates/src/page-scroll-labels/PageScrollLabels';
+import * as sc from '../templates/src/story-cards/params';
+import { camera as scCamera, cardIn, typedCount } from '../templates/src/story-cards/StoryCards';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -127,5 +133,78 @@ describe('排行榜翻页 · logo 快切', () => {
     expect(a.pushAt).toBe(3);
     const b = rl.timeline.apply(raw(rl.defaultParams), 'logo-1', 'end', 2.5, 3.5) as unknown as rl.RankingLogosParams;
     expect(b.logos[1]!.seconds).toBe(1);
+  });
+});
+
+describe('排行榜 logo 快切的发光线', () => {
+  it('五条线在画面两边散开（按原片量的 y 383 / 440 / 498 / 561 / 620），在 x 370 / 880 收到 y 500', () => {
+    expect([0, 1, 2, 3, 4].map((i) => Math.round(linePoint(0, i).y))).toEqual([384, 441, 499, 562, 621]);
+    for (const i of [0, 1, 2, 3, 4]) {
+      expect(linePoint(370, i).y).toBeCloseTo(500, 0);
+      expect(linePoint(880, i).y).toBeCloseTo(500, 0);
+    }
+  });
+
+  it('中间拧成螺旋：上下摆不超过 15.5，两头收小', () => {
+    const ys = Array.from({ length: 100 }, (_, k) => linePoint(560 + k, 0).y);
+    expect(Math.max(...ys)).toBeLessThanOrEqual(515.5);
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(484.5);
+    expect(Math.abs(linePoint(385, 2).y - 500)).toBeLessThan(8);
+  });
+});
+
+describe('金属大标题落下 · 烟雾扫过 · 往下甩走', () => {
+  it('默认 133 帧；标题从上面落下来，30 帧到位，123 帧 1 倍', () => {
+    const p = mt.toProps(mt.defaultParams);
+    expect(p.durationInFrames).toBe(133);
+    expect(mtCamera(10, 999).y).toBeLessThan(200);
+    expect(mtCamera(30, 999).y).toBe(321);
+    expect(mtCamera(123, 999).s).toBe(1);
+    expect(titleIn(5)).toBe(0);
+    expect(titleIn(40)).toBe(1);
+  });
+
+  it('关掉甩走就不往下甩；时长最短 3.5 秒', () => {
+    expect(mtCamera(130, 1e9).whip).toBe(0);
+    expect(mtCamera(130, 123).whip).toBeGreaterThan(50);
+    expect(mt.toProps({ ...mt.defaultParams, whip: false, duration: 1 }).durationInFrames).toBe(105);
+  });
+});
+
+describe('长网页滚到顶 · 推近 · 翻译标签', () => {
+  it('从最底下滚到顶（67 帧）；之后推到 1.8 倍', () => {
+    expect(scrollOffset(0, 1292)).toBe(1292);
+    expect(scrollOffset(67, 1292)).toBe(0);
+    expect(scrollOffset(20, 1292)).toBeLessThan(scrollOffset(10, 1292));
+    expect(zoom(67).s).toBeCloseTo(1, 3);
+    expect(zoom(117).s).toBeCloseTo(1 / 0.5682, 3);
+  });
+
+  it('标签从左往右长出来，第二条晚 2 帧；网页高度最少 720', () => {
+    expect(labelWipe(81, 81, 0)).toBe(0);
+    expect(labelWipe(97, 81, 0)).toBe(1);
+    expect(labelWipe(97, 81, 1)).toBeLessThan(1);
+    expect(psl.toProps({ ...psl.defaultParams, pageHeight: 100 }).pageHeight).toBe(720);
+  });
+});
+
+describe('图文卡片一张张滑进来 · 中间黑圆连线', () => {
+  it('默认 5 张卡片、397 帧；第 305 帧黑圆长出来', () => {
+    const p = sc.toProps(sc.defaultParams);
+    expect(p.cards).toHaveLength(5);
+    expect(p.centerAt).toBe(305);
+    expect(p.durationInFrames).toBe(397);
+    expect(p.cards.map((c) => c.at)).toEqual([0, 75, 112, 158, 210]);
+  });
+
+  it('镜头：开头 2 倍特写，拉到 1 倍；卡片 20 帧滑进来，落稳后每 3.5 帧打一个字', () => {
+    expect(scCamera(0, 380).s).toBeGreaterThan(2);
+    expect(scCamera(360, 380).s).toBe(1);
+    expect(scCamera(394, 380).y).toBeLessThan(0);
+    expect(cardIn(75, 75)).toBe(0);
+    expect(cardIn(95, 75)).toBe(1);
+    expect(typedCount(96, 75, false, 8)).toBe(0);
+    expect(typedCount(97, 75, false, 8)).toBe(1);
+    expect(typedCount(200, 75, false, 8)).toBe(8);
   });
 });

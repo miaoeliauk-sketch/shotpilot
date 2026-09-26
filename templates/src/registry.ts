@@ -89,6 +89,12 @@ import { CompareTable } from './compare-table/CompareTable';
 import * as compareTable from './compare-table/params';
 import { RankingLogos } from './ranking-logos/RankingLogos';
 import * as rankingLogos from './ranking-logos/params';
+import { MarathonTitle } from './marathon-title/MarathonTitle';
+import * as marathonTitle from './marathon-title/params';
+import { PageScrollLabels } from './page-scroll-labels/PageScrollLabels';
+import * as pageScrollLabels from './page-scroll-labels/params';
+import { StoryCards } from './story-cards/StoryCards';
+import * as storyCards from './story-cards/params';
 
 /**
  * 工作台里能用的模板。
@@ -327,6 +333,21 @@ export const TEMPLATES: TemplateDef[] = [
     ...rankingLogos.meta,
     component: RankingLogos,
     toProps: (p) => rankingLogos.toProps(p as unknown as rankingLogos.RankingLogosParams),
+  },
+  {
+    ...marathonTitle.meta,
+    component: MarathonTitle,
+    toProps: (p) => marathonTitle.toProps(p as unknown as marathonTitle.MarathonTitleParams),
+  },
+  {
+    ...pageScrollLabels.meta,
+    component: PageScrollLabels,
+    toProps: (p) => pageScrollLabels.toProps(p as unknown as pageScrollLabels.PageScrollLabelsParams),
+  },
+  {
+    ...storyCards.meta,
+    component: StoryCards,
+    toProps: (p) => storyCards.toProps(p as unknown as storyCards.StoryCardsParams),
   },
 ];
 

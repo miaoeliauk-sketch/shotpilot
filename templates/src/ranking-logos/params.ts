@@ -131,7 +131,7 @@ export const meta: TemplateMeta = {
   id: 'ranking-logos',
   name: '排行榜翻页 · logo 快切',
   description: '方格纸上一张排行榜像翻书一样翻过来，第一名有黄框、蓝条按分数排；然后整张往下推走，一串 logo 一张接一张硬切，每张都慢慢放大',
-  origin: '复刻自一条讲开源大模型的视频里的一个镜头（开头的口播画面已去掉），和原片的相似度 88.0%',
+  origin: '复刻自一条讲开源大模型的视频里的一个镜头（开头的口播画面已去掉），和原片的相似度 86.7%',
   width: 1280,
   height: 720,
   fps: FPS,

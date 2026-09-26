@@ -17,6 +17,7 @@ import { assetUrl } from '../asset';
  *   推走：第 59 帧起整张往下走，越来越快（14 帧下移 382）；第一个 logo 同时从上面落下来（第 71 帧在上方 310，第 81 帧到位，再往下沉 26）
  *   logo：每张以画面中心从 0.995 倍慢慢放大（每帧 +0.00055），到点硬切下一张；原片 0.53（从开始落下算）/ 0.63 / 0.8 / 0.8 / 0.8 秒
  *     上图下字：图 260 见方、中心 y 282，字 84px 字底 555；左图右字：图 160、字 110px，整组居中 y 305
+ *     深色底：五条发光线从两边汇到中间拧成螺旋（见 LINES），跟着 logo 一起慢慢放大
  * 只复刻画面，底部口播字幕不在模板里。
  */
 
@@ -118,6 +119,7 @@ export const RankingLogos: React.FC<RankingLogosProps> = (p) => {
       {logo && (
         <AbsoluteFill style={{ transform: `translateY(${current === 0 ? dropIn(rel).toFixed(1) : 0}px)` }}>
           <AbsoluteFill style={{ transformOrigin: '640px 360px', transform: `scale(${(0.9955 + 0.00055 * (frame - starts[current]! - (current === 0 ? 10 : 0))).toFixed(4)})` }}>
+            {logo.bg === 'dark' && current > 0 && <GlowLines />}
             <Logo card={logo} />
           </AbsoluteFill>
         </AbsoluteFill>
@@ -135,19 +137,105 @@ const PaperBg: React.FC = () => (
 
 const LogoBg: React.FC<{ kind: 'blue' | 'dark' }> = ({ kind }) => {
   if (kind === 'blue') {
-    return <AbsoluteFill style={{ backgroundImage: `${GRID.replace(/0,0,0,0.045/g, '255,255,255,0.05')}, radial-gradient(ellipse 760px 460px at 640px 330px, #1f3fd0, #1733b0 60%, #122890 100%)`, backgroundSize: '10px 10px, 10px 10px, 100% 100%' }} />;
+    return <AbsoluteFill style={{ backgroundImage: `${GRID.replace(/0,0,0,0.045/g, '255,255,255,0.05')}, radial-gradient(ellipse 760px 460px at 640px 360px, #2452f4, #1f46e0 60%, #1d40c6 100%)`, backgroundSize: '10px 10px, 10px 10px, 100% 100%' }} />;
   }
-  // 深色底 + 几道发光的细线从两边汇到中间（通用的装饰线）
-  const lines = Array.from({ length: 6 }, (_, i) => {
-    const off = (i - 2.5) * 22;
-    const d = `M -40 ${420 + off * 2.2} C 260 ${420 + off * 2.2}, 330 500, 640 500 S 1020 ${420 - off * 2.2}, 1320 ${420 - off * 2.2}`;
-    const c = i % 2 ? 'rgba(140,190,255,0.85)' : 'rgba(255,200,210,0.7)';
-    return <path key={i} d={d} fill="none" stroke={c} strokeWidth={1.6} />;
-  });
+  // 深色底：四周纯黑，麻花那一圈一点蓝光、logo 那里一点暖光
   return (
-    <AbsoluteFill style={{ background: 'radial-gradient(ellipse 800px 400px at 640px 420px, #0b1016, #040607 70%, #020303 100%)' }}>
-      <svg width={1280} height={720} style={{ position: 'absolute', left: 0, top: 0, filter: 'drop-shadow(0 0 6px rgba(120,170,255,0.6))' }}>{lines}</svg>
-    </AbsoluteFill>
+    <AbsoluteFill
+      style={{
+        backgroundColor: '#010101',
+        backgroundImage: [
+          'radial-gradient(ellipse 470px 170px at 625px 500px, rgba(40,48,66,0.95), rgba(26,32,44,0.6) 45%, rgba(0,0,0,0) 100%)',
+          'radial-gradient(ellipse 380px 190px at 625px 320px, rgba(26,25,22,0.9), rgba(0,0,0,0) 100%)',
+        ].join(', '),
+      }}
+    />
+  );
+};
+
+/**
+ * 发光线（深色底的 logo 用）：按原片量的
+ *   五条线，两边散开（画面边上 y 383 / 440 / 498 / 561 / 620），往中间收，在 x 370 和 x 880 收到 y 500 一点；
+ *   中间拧成五股螺旋：周期 125、上下摆 ±17（两头 ±11），转到后面的那段暗一点；
+ *   颜色从上到下：蓝、灰蓝、白、米黄、粉；越往两边越暗（边上只有中间的三成亮）
+ */
+export const LINES = {
+  cy: 500, meetL: 370, fullL: 60, meetR: 880, fullR: 1220, period: 125, amp: 15.5,
+  offsets: [-116.5, -59.5, -1.5, 61.5, 120.5],
+  colors: ['#4f8fdc', '#8fb6d4', '#c8d2e6', '#f2e4d2', '#e6cdd4'],
+};
+/** 散开的程度（0 = 收在一点，1 = 完全散开），按原片逐列量的；t = 离收拢点的距离 / 散开段的长度 */
+const SPREAD_L = { t: [0, 0.097, 0.226, 0.419, 0.613, 0.806, 1], v: [0, 0.127, 0.29, 0.6175, 0.853, 0.97, 1] };
+const SPREAD_R = { t: [0, 0.059, 0.176, 0.294, 0.47, 0.647, 0.824, 1], v: [0, 0.09, 0.195, 0.36, 0.68, 0.87, 0.966, 1] };
+
+/** 第 i 条线在 x 处的 y；front = 这一点在螺旋的前面（亮）还是后面（暗） */
+export function linePoint(x: number, i: number) {
+  const L = LINES;
+  let spread = 0;
+  if (x < L.meetL) spread = interpolate((L.meetL - x) / (L.meetL - L.fullL), SPREAD_L.t, SPREAD_L.v, clamp);
+  else if (x > L.meetR) spread = interpolate((x - L.meetR) / (L.fullR - L.meetR), SPREAD_R.t, SPREAD_R.v, clamp);
+  // 螺旋：中间摆得最大，离收拢点 70 以内慢慢收到 0
+  const edge = Math.min(x - L.meetL, L.meetR - x);
+  const env = edge <= 0 ? 0 : Math.sin((Math.PI / 2) * Math.min(1, edge / 70));
+  const ph = (2 * Math.PI * (x - L.meetL)) / L.period + (i * 2 * Math.PI) / 5;
+  return { y: L.cy + spread * L.offsets[i]! + L.amp * env * Math.sin(ph), front: env === 0 || Math.cos(ph) >= 0 };
+}
+
+let linesCache: { d: string; i: number; front: boolean }[] | null = null;
+function linePaths() {
+  if (linesCache) return linesCache;
+  const out: { d: string; i: number; front: boolean }[] = [];
+  for (let i = 0; i < 5; i++) {
+    let seg: string[] = [];
+    let front = linePoint(-30, i).front;
+    for (let x = -30; x <= 1310; x += 3) {
+      const p = linePoint(x, i);
+      if (p.front !== front && seg.length) {
+        seg.push(`${x} ${p.y.toFixed(1)}`);
+        out.push({ d: `M ${seg.join(' L ')}`, i, front });
+        seg = [];
+        front = p.front;
+      }
+      seg.push(`${x} ${p.y.toFixed(1)}`);
+    }
+    if (seg.length > 1) out.push({ d: `M ${seg.join(' L ')}`, i, front });
+  }
+  linesCache = out;
+  return out;
+}
+
+export const GlowLines: React.FC = () => {
+  const paths = linePaths();
+  const L = LINES;
+  // 两层：清楚的细线（中间亮、两边暗到两成半），和一层虚的粗光（两边也有，像离焦）
+  const core: [number, number][] = [[0, 0.12], [60, 0.18], [120, 0.28], [180, 0.42], [240, 0.6], [300, 0.78], [340, 0.9], [L.meetL, 1], [L.meetR, 1], [940, 0.88], [980, 0.76], [1040, 0.6], [1100, 0.44], [1160, 0.3], [1220, 0.19], [1280, 0.13]];
+  const soft: [number, number][] = [[0, 0.95], [180, 0.95], [300, 0.7], [L.meetL, 0.45], [L.meetR, 0.45], [980, 0.7], [1100, 0.95], [1280, 0.95]];
+  const grad = (id: string, stops: [number, number][]) => (
+    <>
+      <linearGradient id={`${id}-g`} gradientUnits="userSpaceOnUse" x1={0} y1={0} x2={1280} y2={0}>
+        {stops.map(([x, v]) => <stop key={x} offset={(x / 1280).toFixed(4)} stopColor="#fff" stopOpacity={v} />)}
+      </linearGradient>
+      <mask id={id} maskUnits="userSpaceOnUse" x={-50} y={0} width={1380} height={720}><rect x={-50} y={0} width={1380} height={720} fill={`url(#${id}-g)`} /></mask>
+    </>
+  );
+  const draw = (front: boolean | null, width: number, opacity: number) =>
+    paths.filter((p) => front === null || p.front === front).map((p, k) => (
+      <path key={`${String(front)}-${width}-${k}`} d={p.d} fill="none" stroke={L.colors[p.i]} strokeWidth={width} strokeLinecap="round" strokeLinejoin="round" opacity={opacity} />
+    ));
+  return (
+    <svg width={1280} height={720} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }}>
+      <defs>
+        {grad('rl-core', core)}
+        {grad('rl-soft', soft)}
+        <filter id="rl-blur" x="-10%" y="-50%" width="120%" height="200%"><feGaussianBlur stdDeviation="4.5" /></filter>
+      </defs>
+      <g mask="url(#rl-soft)" filter="url(#rl-blur)">{draw(null, 11, 0.62)}</g>
+      <g mask="url(#rl-core)">
+        {/* 螺旋转到后面的那段暗一点 */}
+        {draw(false, 3.6, 0.55)}
+        {draw(true, 4.4, 1)}
+      </g>
+    </svg>
   );
 };
 
