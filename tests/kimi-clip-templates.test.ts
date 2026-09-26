@@ -15,6 +15,8 @@ import * as psl from '../templates/src/page-scroll-labels/params';
 import { labelWipe, scrollOffset, zoom } from '../templates/src/page-scroll-labels/PageScrollLabels';
 import * as sc from '../templates/src/story-cards/params';
 import { camera as scCamera, cardIn, typedCount } from '../templates/src/story-cards/StoryCards';
+import * as pt from '../templates/src/phone-talk/params';
+import { rise, textRise, typed as ptTyped } from '../templates/src/phone-talk/PhoneTalk';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -206,5 +208,24 @@ describe('图文卡片一张张滑进来 · 中间黑圆连线', () => {
     expect(typedCount(96, 75, false, 8)).toBe(0);
     expect(typedCount(97, 75, false, 8)).toBe(1);
     expect(typedCount(200, 75, false, 8)).toBe(8);
+  });
+});
+
+describe('对着手机说话 · 对话框打字', () => {
+  it('默认 303 帧；第 4 帧开始打字，第 121 帧弹出回复、156 帧起打字；回复里可以手动换行', () => {
+    const p = pt.toProps(pt.defaultParams);
+    expect(p.durationInFrames).toBe(303);
+    expect([p.askAt, p.replyAt, p.replyTypeAt]).toEqual([4, 121, 156]);
+    expect(p.reply).toContain('\n');
+  });
+
+  it('人从下面升上来，字比框先到位；每一步打一个字', () => {
+    expect(rise(0)).toBe(520);
+    expect(rise(66)).toBe(0);
+    expect(textRise(26)).toBe(0);
+    expect(textRise(13)).toBeLessThan(0.82 * rise(13));
+    expect(ptTyped(3, 4, 5.5, 17)).toBe(0);
+    expect(ptTyped(4, 4, 5.5, 17)).toBe(1);
+    expect(ptTyped(300, 4, 5.5, 17)).toBe(17);
   });
 });

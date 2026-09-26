@@ -95,6 +95,8 @@ import { PageScrollLabels } from './page-scroll-labels/PageScrollLabels';
 import * as pageScrollLabels from './page-scroll-labels/params';
 import { StoryCards } from './story-cards/StoryCards';
 import * as storyCards from './story-cards/params';
+import { PhoneTalk } from './phone-talk/PhoneTalk';
+import * as phoneTalk from './phone-talk/params';
 
 /**
  * 工作台里能用的模板。
@@ -348,6 +350,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...storyCards.meta,
     component: StoryCards,
     toProps: (p) => storyCards.toProps(p as unknown as storyCards.StoryCardsParams),
+  },
+  {
+    ...phoneTalk.meta,
+    component: PhoneTalk,
+    toProps: (p) => phoneTalk.toProps(p as unknown as phoneTalk.PhoneTalkParams),
   },
 ];
 
