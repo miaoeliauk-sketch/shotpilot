@@ -16,7 +16,7 @@ import { labelWipe, scrollOffset, zoom } from '../templates/src/page-scroll-labe
 import * as sc from '../templates/src/story-cards/params';
 import { camera as scCamera, cardIn, typedCount } from '../templates/src/story-cards/StoryCards';
 import * as pt from '../templates/src/phone-talk/params';
-import { rise, textRise, typed as ptTyped } from '../templates/src/phone-talk/PhoneTalk';
+import { ASK, REPLY, charIn, lineTop, rise, textRise, typed as ptTyped } from '../templates/src/phone-talk/PhoneTalk';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -212,11 +212,31 @@ describe('图文卡片一张张滑进来 · 中间黑圆连线', () => {
 });
 
 describe('对着手机说话 · 对话框打字', () => {
-  it('默认 303 帧；第 4 帧开始打字，第 121 帧弹出回复、156 帧起打字；回复里可以手动换行', () => {
+  it('默认 303 帧；第 2 帧开始打字，第 121 帧弹出回复、156 帧起每 3 帧一个字；回复里可以手动换行', () => {
     const p = pt.toProps(pt.defaultParams);
     expect(p.durationInFrames).toBe(303);
-    expect([p.askAt, p.replyAt, p.replyTypeAt]).toEqual([4, 121, 156]);
+    expect([p.askAt, p.replyAt, p.replyTypeAt]).toEqual([2, 121, 156]);
+    expect(p.replyStep).toBeCloseTo(3, 5);
     expect(p.reply).toContain('\n');
+  });
+
+  it('两个框里的字在框里上下居中（按原片量的字底）', () => {
+    // 问句一行字：字身中线（字底往上 0.38 个字号）落在框的中线附近
+    expect(Math.abs(ASK.base - 0.38 * ASK.size - (ASK.y0 + ASK.y1) / 2)).toBeLessThan(2);
+    // 回复两行：第一行字顶到框顶、第二行字底到框底，两边空白差不多
+    const top = REPLY.bases[0]! - 0.88 * REPLY.size - REPLY.y0;
+    const bottom = REPLY.y1 - REPLY.bases[1]!;
+    expect(Math.abs(top - bottom)).toBeLessThan(6);
+    // 行框顶由字底反推：行高 L 的行，字底在行框顶往下 L/2 + 0.436×字号
+    expect(lineTop(100, 20, 40)).toBeCloseTo(100 - 20 - 8.72, 5);
+  });
+
+  it('回复框里的新字从左往右露出来、从下面升上来，6 帧后落定', () => {
+    expect(charIn(0).dy).toBe(12);
+    expect(charIn(0).wipe).toBeLessThan(1);
+    expect(charIn(3).wipe).toBe(1);
+    expect(charIn(6).dy).toBe(0);
+    expect(charIn(3).dy).toBeLessThan(6);
   });
 
   it('人从下面升上来，字比框先到位；每一步打一个字', () => {

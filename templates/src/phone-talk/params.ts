@@ -22,11 +22,11 @@ export const defaultParams: PhoneTalkParams = {
   tipY: 440,
   ask: '还有一件事,老人走不了那么多路.',
   reply: '好的,我会根据昨天的方案调整,\n酒店我们换XX酒店,交通预算也....',
-  // 原片：第 4 帧开始打字，第 121 帧弹出回复，一共 303 帧
-  askAt: 0.13,
-  askSpeed: 5.5,
+  // 原片：第 2 帧开始打字（每秒约 4.9 个字），第 121 帧弹出回复、第 156 帧起每秒约 10 个字，一共 303 帧
+  askAt: 0.07,
+  askSpeed: 4.9,
   replyAt: 4.03,
-  replySpeed: 11,
+  replySpeed: 10,
   duration: 10.1,
 };
 
@@ -103,7 +103,7 @@ export const meta: TemplateMeta = {
   id: 'phone-talk',
   name: '对着手机说话 · 对话框打字',
   description: '浅灰底上一个拿着手机的人从下面升上来，手机那里伸出黑色尖角连到白色对话框，一个字一个字打出一句话；过一会儿下面弹出回复框，也一个字一个字打出来',
-  origin: '复刻自一条讲编程评测榜单的视频里的一个镜头，和原片的相似度 95.0%',
+  origin: '复刻自一条讲编程评测榜单的视频里的一个镜头，和原片的相似度 96.3%',
   width: 1280,
   height: 720,
   fps: FPS,

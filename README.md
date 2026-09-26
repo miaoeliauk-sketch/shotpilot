@@ -275,7 +275,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`marathon-title`](templates/src/marathon-title/) | 4.4 秒：暗暗的视频画面上一行金属拉丝大标题从上面落下来、一团烟雾扫过，然后放大、上面淡出一行小字，最后往下甩走 | SSIM 0.938 |
 | [`page-scroll-labels`](templates/src/page-scroll-labels/) | 5.6 秒：一张很长的深色网页截图从最底下快速滚到顶，停住后推近，两条浅灰翻译标签从左往右长出来，最后往上甩走 | SSIM 0.869 |
 | [`story-cards`](templates/src/story-cards/) | 13.2 秒：浅灰纸上一张张「图 + 一句话」的圆角卡片从四周滑进来、字一个个打出来，最后中间黑圆长大、细线连到每张卡片 | SSIM 0.855 |
-| [`phone-talk`](templates/src/phone-talk/) | 10 秒：拿手机的人从下面升上来，黑色尖角连到白色对话框，一句话一个字一个字打出来，下面再弹出回复框打字 | SSIM 0.950 |
+| [`phone-talk`](templates/src/phone-talk/) | 10 秒：拿手机的人从下面升上来，黑色尖角连到白色对话框，一句话一个字一个字打出来，下面再弹出回复框，每个字从下面升上来 | SSIM 0.963 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 
