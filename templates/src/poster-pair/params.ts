@@ -7,6 +7,7 @@ export type BigLineParams = { before: string; big: string; after: string; at: nu
 
 export type PosterPairParams = {
   intro: string;
+  introEnd: number;
   background: string;
   leftTitle: string;
   leftSub: string;
@@ -25,7 +26,9 @@ export type PosterPairParams = {
 };
 
 export const defaultParams: PosterPairParams = {
-  intro: '/template-assets/card-tags/studio.jpg',
+  // 开头的口播画面（A-roll）默认不放：一开始就是背景；放了就在 introEnd 秒淡成背景（原片第 50 帧）
+  intro: '',
+  introEnd: 1.67,
   background: '/template-assets/word-magnifier/grey-wall.jpg',
   leftTitle: '精准作答',
   leftSub: 'Answer accurately',
@@ -52,7 +55,8 @@ const frames = (sec: number) => Math.round(sec * FPS);
 
 export function toProps(p: PosterPairParams): PosterPairProps {
   return {
-    intro: p.intro,
+    intro: p.intro ?? '',
+    introEnd: frames(p.introEnd ?? 1.67),
     background: p.background,
     left: { title: p.leftTitle, sub: p.leftSub, letters: p.leftLetters, image: p.leftImage, tone: 'cream' },
     right: { title: p.rightTitle, sub: p.rightSub, letters: p.rightLetters, image: p.rightImage, tone: 'peach' },
@@ -76,7 +80,8 @@ const form: Section[] = [
   {
     title: '画面',
     fields: [
-      { kind: 'media', key: 'intro', label: '开头的口播画面', hint: '视频最好；前 2 秒卡片出现在它上面，之后淡成背景' },
+      { kind: 'media', key: 'intro', label: '开头的口播画面（A-roll）', hint: '放你自己的口播视频，卡片先出现在它上面，到点淡成背景；留空就一开始就是背景' },
+      { kind: 'number', key: 'introEnd', label: '第几秒换成背景', min: 0, max: 60, step: 0.1, unit: '秒', hint: '只在放了开头画面时有用，0.5 秒淡过去' },
       { kind: 'media', key: 'background', label: '背景', hint: '原片是一面灰墙' },
       { kind: 'toggle', key: 'vignette', label: '四周暗角' },
     ],
@@ -116,7 +121,7 @@ export const timeline: TemplateTimeline = {
     return [
       {
         id: 'camera', label: '镜头', kind: 'camera',
-        items: [{ id: 'cam', label: '口播 → 灰墙，慢慢推近', start: 0, end: p.duration, phases: [{ label: '换背景', start: 1.67, end: 2.2 }], select: { section: '画面' }, drag: { end: true } }],
+        items: [{ id: 'cam', label: p.intro ? '口播 → 背景，慢慢推近' : '慢慢推近', start: 0, end: p.duration, phases: p.intro ? [{ label: '换背景', start: p.introEnd, end: p.introEnd + 0.53 }] : [], select: { section: '画面' }, drag: { end: true } }],
       },
       {
         id: 'elements', label: '元素', kind: 'element',
@@ -143,7 +148,7 @@ export const timeline: TemplateTimeline = {
 export const meta: TemplateMeta = {
   id: 'poster-pair',
   name: '两张海报卡片 · 合在一起 · 右边大字',
-  description: '口播画面上两张海报卡片先后出来，背景换成灰墙、中间打出一句话；右边那张滑过去叠在左边那张上，右边一行行「小字 + 大字 + 小字」淡进来',
+  description: '两张海报卡片先后出来（开头可以垫一段口播画面，再淡成背景）、中间打出一句话；右边那张滑过去叠在左边那张上，右边一行行「小字 + 大字 + 小字」淡进来',
   origin: '复刻自一条讲 AI 幻觉的视频里的一个镜头，和原片的相似度 85.9%',
   width: 1280,
   height: 720,

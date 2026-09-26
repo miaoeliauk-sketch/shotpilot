@@ -62,6 +62,18 @@ describe('两张海报卡片 · 合在一起 · 右边大字', () => {
     expect(ppCamera(300) - ppCamera(260)).toBeLessThan(ppCamera(200) - ppCamera(160));
   });
 
+  it('开头的口播画面默认不放（一开始就是背景）；放了就在「第几秒换成背景」淡掉', () => {
+    const p = pp.toProps(pp.defaultParams);
+    expect(p.intro).toBe('');
+    const withIntro = pp.toProps({ ...pp.defaultParams, intro: 'a-roll.mp4', introEnd: 3 });
+    expect([withIntro.intro, withIntro.introEnd]).toEqual(['a-roll.mp4', 90]);
+    const tracks = pp.timeline.tracks(raw({ ...pp.defaultParams, intro: 'a-roll.mp4', introEnd: 3 }));
+    const phase = tracks[0]!.items[0]!.phases![0]!;
+    expect([phase.label, phase.start]).toEqual(['换背景', 3]);
+    expect(phase.end).toBeCloseTo(3.53, 5);
+    expect(pp.timeline.tracks(raw(pp.defaultParams))[0]!.items[0]!.phases).toEqual([]);
+  });
+
   it('中间那句从第 72 帧起每 4 帧打一个字；空的行不出', () => {
     expect(typedMiddle(71, '同一套')).toBe(0);
     expect(typedMiddle(76, '同一套')).toBe(2);

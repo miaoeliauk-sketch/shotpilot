@@ -10,7 +10,7 @@ import { POSTER, PosterCard, type Poster } from '../poster-card/PosterCard';
  *
  * 按原片量的（世界坐标 = 第 120 帧，镜头 1 倍）：
  *   左卡片左上 (124, 144)、右卡片左上 (824, 152)（各 326×373 含窗口栏）；第 20、36 帧淡进来（12 帧，略大一点缩回来）
- *   背景：第 50–66 帧口播画面变虚、淡成灰墙
+ *   背景：开头可以放一段口播画面（A-roll），第 50–66 帧变虚、淡成灰墙；不放就一开始就是灰墙
  *   中间：英文两行（斜体细字 30px，x 480、y 295）70 帧淡进来；中文（斜体 49px，x 468、y 383）72 帧起每 4 帧打一个字
  *   合在一起：第 128 帧右卡片往左滑 560、往下 26（28 帧，先慢后快再慢），左卡片逆时针歪 6°；中间的字 134–144 帧淡掉
  *   右边三行（底边对齐）：大字粗黑斜体 128px 压到 0.66，小字 46px；
@@ -23,6 +23,7 @@ export type BigLine = { before: string; big: string; after: string; at: number }
 
 export type PosterPairProps = {
   intro: string;
+  introEnd: number;
   background: string;
   left: Poster;
   right: Poster;
@@ -68,7 +69,8 @@ export function typedMiddle(frame: number, text: string): number {
 export const PosterPair: React.FC<PosterPairProps> = (p) => {
   const frame = useCurrentFrame();
   const cam = cameraScale(frame);
-  const introOut = interpolate(frame, [50, 66], [0, 1], clamp);
+  // 没有开头画面就一开始就是背景
+  const introOut = p.intro ? interpolate(frame, [p.introEnd, p.introEnd + 16], [0, 1], clamp) : 1;
   const m = mergePose(frame, p.mergeAt);
   const midOut = interpolate(frame, [p.mergeAt + 6, p.mergeAt + 16], [1, 0], clamp);
   const in1 = Easing.out(Easing.cubic)(interpolate(frame, [20, 32], [0, 1], clamp));
@@ -82,7 +84,7 @@ export const PosterPair: React.FC<PosterPairProps> = (p) => {
           <Media src={p.background} style={{ width: '100%', height: '100%' }} />
         </div>
       </AbsoluteFill>
-      {/* 口播画面（开头），变虚淡掉 */}
+      {/* 开头的口播画面（A-roll，可换可不要），到点变虚、淡成背景 */}
       {p.intro && introOut < 1 && (
         <AbsoluteFill style={{ opacity: 1 - introOut, filter: introOut > 0 ? `blur(${(10 * introOut).toFixed(1)}px)` : undefined }}>
           <Media src={p.intro} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
