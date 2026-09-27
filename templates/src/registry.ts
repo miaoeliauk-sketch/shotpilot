@@ -105,6 +105,8 @@ import { TitleScoreTable } from './title-score-table/TitleScoreTable';
 import * as titleScoreTable from './title-score-table/params';
 import { WebComparePixels } from './web-compare-pixels/WebComparePixels';
 import * as webComparePixels from './web-compare-pixels/params';
+import { BrainStatCards } from './brain-stat-cards/BrainStatCards';
+import * as brainStatCards from './brain-stat-cards/params';
 
 /**
  * 工作台里能用的模板。
@@ -383,6 +385,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...webComparePixels.meta,
     component: WebComparePixels,
     toProps: (p) => webComparePixels.toProps(p as unknown as webComparePixels.WebComparePixelsParams),
+  },
+  {
+    ...brainStatCards.meta,
+    component: BrainStatCards,
+    toProps: (p) => brainStatCards.toProps(p as unknown as brainStatCards.BrainStatCardsParams),
   },
 ];
 

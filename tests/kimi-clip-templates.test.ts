@@ -23,6 +23,10 @@ import * as hc from '../templates/src/halftone-captions/params';
 import { captionSize, fadeIn, letterDelay } from '../templates/src/halftone-captions/HalftoneCaptions';
 import * as tst from '../templates/src/title-score-table/params';
 import * as wcp from '../templates/src/web-compare-pixels/params';
+import * as bsc from '../templates/src/brain-stat-cards/params';
+import { brainSpin, brainToWorld, camera as bscCamera, cardPhase, dotY, worldToBrain } from '../templates/src/brain-stat-cards/BrainStatCards';
+import { CAM as BSC_CAM } from '../templates/src/brain-stat-cards/camera';
+import { fabricValue } from '../templates/src/fabric';
 import { barWipe, darkCamera, lensParams, squareLit, webCamera, wipeX } from '../templates/src/web-compare-pixels/WebComparePixels';
 import { DARK_CAM, WEB_CAM } from '../templates/src/web-compare-pixels/camera';
 import { FLOATERS, TABLE, cameraY, drift, floatLead, gridValue, settle, typedCount as tstTyped } from '../templates/src/title-score-table/TitleScoreTable';
@@ -457,5 +461,52 @@ describe('网页截图推拉 · 暗色对比表 · 像素方块标签', () => {
     expect(lensParams(200).b150).toBeGreaterThan(0);
     expect(lensParams(500).b150).toBe(0);
     expect(lensParams(500).edge).toBe(470);
+  });
+});
+
+describe('转正的大脑 · 对话标签 · 挂着的数据卡片', () => {
+  it('默认 427 帧；两组各两张卡，右边一张是金色；布纹默认开、可以关', () => {
+    const p = bsc.toProps(bsc.defaultParams);
+    expect(p.durationInFrames).toBe(427);
+    expect(p.groups.map((g) => g.cards.map((c) => c.gold))).toEqual([[false, true], [false, true]]);
+    expect(p.texture).toBe('');
+    expect(bsc.toProps({ ...bsc.defaultParams, fabric: false }).texture).toBe('none');
+  });
+
+  it('镜头关键帧递增，第 22→23 帧一下推近；最后一帧就是世界坐标', () => {
+    for (let i = 1; i < BSC_CAM.t.length; i++) expect(BSC_CAM.t[i]!).toBeGreaterThan(BSC_CAM.t[i - 1]!);
+    expect(bscCamera(23).s / bscCamera(22).s).toBeGreaterThan(2);
+    const end = bscCamera(391);
+    expect(end.s).toBeCloseTo(1, 1);
+    expect(Math.abs(end.x)).toBeLessThan(5);
+  });
+
+  it('大脑第 0 帧转着 70°、第 56 帧转正；黑球最后钉在画面顶上', () => {
+    expect(brainSpin(0)).toBeGreaterThan(60);
+    expect(Math.abs(brainSpin(56))).toBeLessThan(0.5);
+    expect(dotY(400)).toBeCloseTo(-1, 0);
+    expect(dotY(150)).toBeGreaterThan(700);
+  });
+
+  it('大脑段坐标和世界坐标来回换得回来', () => {
+    const [x, y] = brainToWorld(637, 362);
+    const [bx, by] = worldToBrain(x, y);
+    expect(bx).toBeCloseTo(637, 6);
+    expect(by).toBeCloseTo(362, 6);
+  });
+
+  it('卡片先是毛玻璃，再变深、字浮出来', () => {
+    expect(cardPhase(100, 164)).toMatchObject({ glass: 0, solid: 0, content: 0 });
+    expect(cardPhase(167, 164).glass).toBeGreaterThan(0.5);
+    expect(cardPhase(190, 164)).toMatchObject({ glass: 0, solid: 1, content: 1 });
+  });
+
+  it('合成布纹起伏在几个百分点', () => {
+    let lo = 0;
+    let hi = 0;
+    for (let y = 0; y < 30; y++) for (let x = 0; x < 30; x++) { const v = fabricValue(x, y); lo = Math.min(lo, v); hi = Math.max(hi, v); }
+    expect(hi).toBeGreaterThan(0.02);
+    expect(lo).toBeLessThan(-0.02);
+    expect(hi - lo).toBeLessThan(0.2);
   });
 });

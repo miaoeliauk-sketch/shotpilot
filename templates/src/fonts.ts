@@ -32,6 +32,8 @@ export const BUNDLED_FONTS = {
   poppinsBold: { family: 'ShotPilot Poppins Bold', file: 'Poppins-Bold.ttf', weight: '100 900' },
   /** 窄体中粗（表格里的英文名字） */
   barlowCondensed: { family: 'ShotPilot Barlow Condensed', file: 'BarlowCondensed-Medium.ttf', weight: '100 900' },
+  /** 高反差衬线正体，可变字重 400–900（卡片上的名字） */
+  playfair: { family: 'ShotPilot Playfair', file: 'PlayfairDisplay-Variable.ttf', weight: '400 900' },
 } as const;
 
 type FontKey = keyof typeof BUNDLED_FONTS;
