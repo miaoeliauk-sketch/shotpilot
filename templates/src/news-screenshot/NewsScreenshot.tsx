@@ -186,7 +186,9 @@ const HeadlinePage: React.FC<{ p: NewsScreenshotProps; photoTop: number; tp: num
       {lines.map((line, i) => {
         const prog = i === 0 ? b1 : b2;
         const w = measure(line, `700 ${size}px ${SERIF}`);
-        const brushW = (w + 36) * prog;
+        // 笔刷图最右 10% 是毛边（只盖住一半），整条要比字长出一截，毛边落在字外面，最后一个字才盖得住
+        const brushFull = (w + 40) / 0.9;
+        const brushW = brushFull * prog;
         const top = tops[i]! - 33;
         const textStyle: React.CSSProperties = { position: 'absolute', left: 78, top, height: 66, lineHeight: '66px', fontFamily: SERIF, fontWeight: 700, fontSize: size, whiteSpace: 'pre' };
         return (
@@ -198,7 +200,7 @@ const HeadlinePage: React.FC<{ p: NewsScreenshotProps; photoTop: number; tp: num
                   style={{
                     position: 'absolute', left: 62, top: top - 2, width: brushW, height: 70, backgroundColor: '#0c0c0c',
                     WebkitMaskImage: `url(${bundledUrl('news-screenshot/brush.png')})`, maskImage: `url(${bundledUrl('news-screenshot/brush.png')})`,
-                    WebkitMaskSize: `${w + 36}px 70px`, maskSize: `${w + 36}px 70px`, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
+                    WebkitMaskSize: `${brushFull}px 70px`, maskSize: `${brushFull}px 70px`, WebkitMaskRepeat: 'no-repeat', maskRepeat: 'no-repeat',
                   }}
                 />
                 <div style={{ ...textStyle, color: '#f4f4f4', clipPath: `inset(0 ${Math.max(0, w + 16 - brushW)}px 0 0)` }}>{line}</div>

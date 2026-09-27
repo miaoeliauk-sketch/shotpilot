@@ -108,7 +108,7 @@ describe('闪白切换 · 竖排标题', () => {
 describe('指向人物 · 对话场景', () => {
   it('对话框按「放在哪」换算成场景二里的位置', () => {
     const p = pointing.toProps(pointing.defaultParams);
-    expect(p.bubbles.map((b) => [b.x, b.y])).toEqual([[753, 250], [135, 319], [447, 118]]);
+    expect(p.bubbles.map((b) => [b.x, b.y])).toEqual([[780, 250], [135, 319], [447, 118]]);
     expect(p.bubbles[2]!.small).toBe(true);
     expect(p.switchAt).toBe(156);
   });

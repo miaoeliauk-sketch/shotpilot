@@ -15,14 +15,14 @@ export type ChatGuestParams = {
 };
 
 export const defaultParams: ChatGuestParams = {
-  presenter: '/template-assets/ticket-percent/presenter.jpg',
+  presenter: '/template-assets/chat-guest/presenter.jpg',
   guest: '/template-assets/chat-guest/guest.png',
   logo: '/template-assets/people-labels/logo.png',
   // 原片：三条对话条在第 16、84、88 帧出来，一共 360 帧
   lines: [
-    { text: '为什么和实际比例不同', at: 0.53, x: 663, y: 147, align: 'right' },
+    { text: '为什么和实际比例不同', at: 0.53, x: 645, y: 147, align: 'right' },
     { text: '正在整理赔付承诺书', at: 2.8, x: 27, y: 261, align: 'left' },
-    { text: '赔付xxx元，x月x日到账...', at: 2.93, x: 93, y: 386, align: 'left' },
+    { text: '赔付xxx元，x月x日到账...', at: 2.93, x: 60, y: 386, align: 'left' },
   ],
   vignette: true,
   duration: 12,

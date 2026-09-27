@@ -127,7 +127,7 @@ export const DocPortraitCount: React.FC<DocPortraitCountProps> = (p) => {
           }}
         >
           {p.caption && (
-            <div style={{ position: 'absolute', left: 0, top: -64, height: 40, lineHeight: '40px', fontFamily: SANS, fontSize: 28, color: '#4a4a4a', whiteSpace: 'pre' }}>{`；${p.caption}`}</div>
+            <div style={{ position: 'absolute', left: 0, top: -64, height: 40, lineHeight: '40px', fontFamily: SANS, fontSize: 28, color: '#4a4a4a', whiteSpace: 'pre' }}>{p.caption}</div>
           )}
           <div style={{ position: 'absolute', inset: 0, boxShadow: '0 18px 36px rgba(0,0,0,0.3)', backgroundColor: '#fff' }}>
             <Media src={p.doc} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

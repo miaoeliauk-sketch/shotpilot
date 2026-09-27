@@ -27,7 +27,7 @@ export const defaultParams: CompanyCardsParams = {
   signatureColor: '#3a5ad8',
   cards: [
     { name: '迈克尔·奥赖利', english: "Michael O'Reilly", role: '首席医疗官', roleEnglish: 'Chief Medical Officer', image: '/template-assets/person-card/sample-syringe.png' },
-    { name: '马塞洛·拉梅戈', english: 'Marcelo Lamego', role: '技术负责人', roleEnglish: 'Marcelo Lamego', image: '/template-assets/person-card/sample-syringe.png' },
+    { name: '马塞洛·拉梅戈', english: 'Marcelo Lamego', role: '技术负责人', roleEnglish: 'Head of Technology', image: '/template-assets/person-card/sample-syringe.png' },
   ],
   // 原片：第 110 帧开始横甩、第 206 帧第二张卡片、第 268 帧开始推近
   whipAt: 3.67,

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from 'remotion';
+import { measure } from '../text-layout';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
 import { POSTER, PosterCard, type Poster } from '../poster-card/PosterCard';
@@ -125,6 +126,15 @@ export const PosterPair: React.FC<PosterPairProps> = (p) => {
   );
 };
 
+/** 一行字太长就整行缩小：镜头最后推到 1.1 倍（以画面中心），右边要留在画面里（放大后离右边 40） */
+export function lineFit(line: { before: string; big: string; after: string }, x: number): number {
+  const small = (t: string) => (t ? measure(t, `400 ${SMALL.size}px ${SANS}`) + 4 : 0);
+  const big = line.big ? measure(line.big, `700 ${BIG.size}px ${SANS}`) * BIG.squeeze + BIG.size * 0.12 + 4 : 0;
+  const total = small(line.before) + big + small(line.after);
+  const maxRight = 640 + (1280 - 40 - 640) / 1.1;
+  return Math.min(1, (maxRight - x) / Math.max(1, total));
+}
+
 const Line: React.FC<{ line: BigLine; slot: { x: number; bottom: number }; frame: number }> = ({ line, slot, frame }) => {
   const u = (d: number) => Easing.out(Easing.quad)(interpolate(frame - line.at - d, [0, 14], [0, 1], clamp));
   const small = (text: string, d: number): React.ReactNode => {
@@ -138,8 +148,9 @@ const Line: React.FC<{ line: BigLine; slot: { x: number; bottom: number }; frame
   };
   const vb = u(4);
   if (frame < line.at) return null;
+  const fit = lineFit(line, slot.x);
   return (
-    <div style={{ position: 'absolute', left: slot.x, bottom: 720 - slot.bottom, display: 'flex', alignItems: 'flex-end', whiteSpace: 'pre', gap: 4 }}>
+    <div style={{ position: 'absolute', left: slot.x, bottom: 720 - slot.bottom, display: 'flex', alignItems: 'flex-end', whiteSpace: 'pre', gap: 4, transform: fit < 1 ? `scale(${fit.toFixed(3)})` : undefined, transformOrigin: '0 100%' }}>
       {small(line.before, 0)}
       {vb > 0 && (
         <span

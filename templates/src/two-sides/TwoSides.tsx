@@ -5,6 +5,7 @@ import { useBundledFont } from '../fonts';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
 import { IconTile } from '../icon-red-words/IconRedWords';
+import { measure } from '../text-layout';
 
 /**
  * 复刻：中间一块白色 AI 图标，左右各一段说明（标题 + 三行字 + 一个小图）；镜头推到左边、切到右边、再拉回全景，
@@ -46,6 +47,24 @@ export const TILE = { x: 624, y: 328, size: 468, rot: 12, textScale: 1.1 };
 export const LEFT = { titleX: 136, titleTop: 122, titleH: 83, lineX: 135, lineTop: 228, pitch: 56, img: { x: 203, y: 440, w: 250, h: 190 }, red: { x: 100, y: 222, h: 190 } };
 export const RIGHT = { titleX: 878, titleTop: 318, titleH: 74, lineX: 876, lineTop: 416, pitch: 54.5, img: { x: 1072, y: 248, w: 190, h: 170 }, red: { x: 928, y: 337, h: 184 } };
 const LINE = { size: 36, squeeze: 0.76 };
+
+/** 图标（转正后）左边缘在高度 y 处的 x：左边的字不能钻到图标下面 */
+export function tileLeftEdge(y: number): number {
+  const a = (TILE.rot * Math.PI) / 180;
+  const h = TILE.size / 2;
+  const top = { x: TILE.x - h * Math.cos(a) + h * Math.sin(a), y: TILE.y - h * Math.sin(a) - h * Math.cos(a) };
+  const bottom = { x: TILE.x - h * Math.cos(a) - h * Math.sin(a), y: TILE.y - h * Math.sin(a) + h * Math.cos(a) };
+  const u = (y - top.y) / (bottom.y - top.y);
+  return top.x + (bottom.x - top.x) * Math.min(1, Math.max(0, u));
+}
+
+/** 左边第 i 行字的横向压缩：放不下就再压窄一点，右边离图标至少 16 */
+export function leftLineSqueeze(text: string, i: number): number {
+  const w = measure(text, `400 ${LINE.size}px ${SANS}`);
+  const yMid = LEFT.lineTop + i * LEFT.pitch - 10 + LINE.size * 0.7;
+  const room = tileLeftEdge(yMid) - 16 - LEFT.lineX;
+  return Math.min(LINE.squeeze, room / Math.max(1, w));
+}
 
 type Cam = { s: number; x: number; y: number };
 type Seg = { t: number[]; s: number[]; x: number[]; y: number[] };
@@ -168,7 +187,7 @@ const Texts: React.FC<{ side: Side; u: number; layout: typeof LEFT | typeof RIGH
           key={i}
           style={{
             position: 'absolute', left: layout.lineX, top: layout.lineTop + i * layout.pitch - 10, height: LINE.size * 1.4, lineHeight: `${LINE.size * 1.4}px`, whiteSpace: 'pre',
-            fontFamily: SANS, fontWeight: 400, fontSize: LINE.size, transform: `scaleX(${LINE.squeeze})`, transformOrigin: '0 50%',
+            fontFamily: SANS, fontWeight: 400, fontSize: LINE.size, transform: `scaleX(${(tone === 'left' ? leftLineSqueeze(l, i) : LINE.squeeze).toFixed(3)})`, transformOrigin: '0 50%',
             color: tone === 'left' ? '#686868' : '#4d5f8c',
           }}
         >

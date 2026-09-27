@@ -26,7 +26,7 @@ export type PointingInterviewParams = {
 
 /** 对话框放在哪（场景二的坐标，第 300 帧量的） */
 const SLOTS: Record<BubbleParams['side'], { x: number; y: number; width: number; small?: boolean }> = {
-  right: { x: 753, y: 250, width: 306 },
+  right: { x: 780, y: 250, width: 306 }, // 让开男人的头（头在 x 733–774）
   left: { x: 135, y: 319, width: 304 },
   top: { x: 447, y: 118, width: 304, small: true },
 };
