@@ -21,6 +21,8 @@ import * as cw from '../templates/src/card-words/params';
 import { cardPose, dissolveAlpha, lumaInvert, panY, shadeOffset, verticalShade, wordSize } from '../templates/src/card-words/CardWords';
 import * as hc from '../templates/src/halftone-captions/params';
 import { captionSize, fadeIn, letterDelay } from '../templates/src/halftone-captions/HalftoneCaptions';
+import * as tst from '../templates/src/title-score-table/params';
+import { FLOATERS, TABLE, cameraY, drift, floatLead, gridValue, settle, typedCount as tstTyped } from '../templates/src/title-score-table/TitleScoreTable';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -358,5 +360,59 @@ describe('视频上的网点大字 · 英文小字', () => {
     expect(Math.min(...ds)).toBeGreaterThanOrEqual(0);
     expect(Math.max(...ds)).toBeLessThan(6);
     expect(new Set(ds.map((d) => d.toFixed(2))).size).toBeGreaterThan(10);
+  });
+});
+
+describe('错落宋体大标题 · 镜头下甩 · 分数表', () => {
+  it('默认 239 帧；三行、前两行刷黄；装饰图开关转成字符串', () => {
+    const p = tst.toProps(tst.defaultParams);
+    expect(p.durationInFrames).toBe(239);
+    expect(p.rows).toHaveLength(3);
+    expect(p.highlight).toBe(2);
+    expect(p.floaters).toBe('on');
+    expect(tst.toProps({ ...tst.defaultParams, floaters: false }).floaters).toBe('none');
+    expect(tst.toProps({ ...tst.defaultParams, highlight: 9, duration: 1 })).toMatchObject({ highlight: 3, durationInFrames: 126 });
+  });
+
+  it('镜头第 32 帧起往下甩，第 80 帧停在表格上；之后只剩轻微漂移', () => {
+    expect(cameraY(32)).toBe(0);
+    expect(cameraY(53)).toBe(-390);
+    expect(cameraY(80)).toBe(-TABLE.offset);
+    expect(cameraY(200)).toBe(-TABLE.offset);
+    const [dx, dy] = drift(238);
+    expect(Math.abs(dx)).toBeLessThanOrEqual(15);
+    expect(Math.abs(dy)).toBeLessThanOrEqual(15);
+  });
+
+  it('入场偏移指数衰减；装饰图下甩时先到，第 100 帧跟上表格', () => {
+    expect(settle([100, -50], 0.1, 0)).toEqual([100, -50]);
+    const [x] = settle([100, 0], 0.1, 30);
+    expect(x).toBeCloseTo(100 * Math.exp(-3), 6);
+    expect(floatLead(54)).toBe(-80);
+    expect(floatLead(100)).toBe(0);
+    expect(FLOATERS).toHaveLength(4);
+  });
+
+  it('名字 7 帧打完（不管几个字），分数每帧一个字', () => {
+    expect(tstTyped(50, 51, 7, 7)).toBe(0);
+    expect(tstTyped(51, 51, 7, 7)).toBe(1);
+    expect(tstTyped(57, 51, 7, 7)).toBe(7);
+    expect(tstTyped(88, 88, 10, 7)).toBe(2);
+    expect(tstTyped(94, 88, 10, 7)).toBe(10);
+    expect(tstTyped(67, 65, 4)).toBe(3);
+    expect(TABLE.rowAt).toEqual([51, 68, 88]);
+  });
+
+  it('纸面细网格起伏不大、确定的', () => {
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let y = 0; y < 40; y++) for (let x = 0; x < 40; x++) {
+      const v = gridValue(x, y);
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+    expect(hi - lo).toBeGreaterThan(5);
+    expect(hi - lo).toBeLessThan(60);
+    expect(gridValue(3, 7)).toBe(gridValue(3, 7));
   });
 });

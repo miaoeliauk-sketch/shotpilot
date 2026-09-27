@@ -101,6 +101,8 @@ import { CardWords } from './card-words/CardWords';
 import * as cardWords from './card-words/params';
 import { HalftoneCaptions } from './halftone-captions/HalftoneCaptions';
 import * as halftoneCaptions from './halftone-captions/params';
+import { TitleScoreTable } from './title-score-table/TitleScoreTable';
+import * as titleScoreTable from './title-score-table/params';
 
 /**
  * 工作台里能用的模板。
@@ -369,6 +371,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...halftoneCaptions.meta,
     component: HalftoneCaptions,
     toProps: (p) => halftoneCaptions.toProps(p as unknown as halftoneCaptions.HalftoneCaptionsParams),
+  },
+  {
+    ...titleScoreTable.meta,
+    component: TitleScoreTable,
+    toProps: (p) => titleScoreTable.toProps(p as unknown as titleScoreTable.TitleScoreTableParams),
   },
 ];
 

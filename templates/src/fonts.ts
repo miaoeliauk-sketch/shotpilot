@@ -20,6 +20,14 @@ export const BUNDLED_FONTS = {
   vibes: { family: 'ShotPilot Great Vibes', file: 'GreatVibes-Regular.ttf', weight: '100 900' },
   /** 圆润的几何无衬线（大写 E 像 ε），大字下面的英文小字 */
   comfortaa: { family: 'ShotPilot Comfortaa', file: 'Comfortaa-Bold.ttf', weight: '100 900' },
+  /** 很宽很粗的无衬线（表格里的名字、分数） */
+  archivoBlack: { family: 'ShotPilot Archivo Black', file: 'ArchivoBlack-Regular.ttf', weight: '100 900' },
+  /** 同一家族的常规体 */
+  archivo: { family: 'ShotPilot Archivo', file: 'Archivo-Regular.ttf', weight: '100 900' },
+  /** 高反差的衬线斜体（英文小标题） */
+  playfairItalic: { family: 'ShotPilot Playfair Italic', file: 'PlayfairDisplay-Italic.ttf', weight: '100 900' },
+  /** 半粗斜体（红色英文） */
+  barlowItalic: { family: 'ShotPilot Barlow Italic', file: 'Barlow-SemiBoldItalic.ttf', weight: '100 900' },
 } as const;
 
 type FontKey = keyof typeof BUNDLED_FONTS;
