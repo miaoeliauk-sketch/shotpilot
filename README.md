@@ -276,6 +276,8 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`page-scroll-labels`](templates/src/page-scroll-labels/) | 5.6 秒：一张很长的深色网页截图从最底下快速滚到顶，停住后推近，两条浅灰翻译标签从左往右长出来，最后往上甩走 | SSIM 0.869 |
 | [`story-cards`](templates/src/story-cards/) | 13.2 秒：浅灰纸上一张张「图 + 一句话」的圆角卡片从四周滑进来、字一个个打出来，最后中间黑圆长大、细线连到每张卡片 | SSIM 0.855 |
 | [`phone-talk`](templates/src/phone-talk/) | 10 秒：拿手机的人从下面升上来，黑色尖角连到白色对话框，一句话一个字一个字打出来，下面再弹出回复框，每个字从下面升上来 | SSIM 0.963 |
+| [`card-words`](templates/src/card-words/) | 12.7 秒：浅灰底上一张截图卡片歪着飞上来、转正，推近再往下看，右边暗下来；卡片按亮度溶解（黑字翻成白字），露出视频和斜体网点大字，之后一段视频一个大字硬切 | SSIM 0.910 |
+| [`halftone-captions`](templates/src/halftone-captions/) | 5.7 秒：只做字——视频上一个斜体网点大字、下面一行英文小字，第一个字淡进来（英文字母一个个冒出来），之后跟着视频一切就换字 | SSIM 0.929 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 

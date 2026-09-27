@@ -18,6 +18,8 @@ export const BUNDLED_FONTS = {
   barlow: { family: 'ShotPilot Barlow', file: 'Barlow-Medium.ttf', weight: '100 900' },
   /** 手写签名体 */
   vibes: { family: 'ShotPilot Great Vibes', file: 'GreatVibes-Regular.ttf', weight: '100 900' },
+  /** 圆润的几何无衬线（大写 E 像 ε），大字下面的英文小字 */
+  comfortaa: { family: 'ShotPilot Comfortaa', file: 'Comfortaa-Bold.ttf', weight: '100 900' },
 } as const;
 
 type FontKey = keyof typeof BUNDLED_FONTS;

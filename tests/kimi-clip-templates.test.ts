@@ -17,6 +17,10 @@ import * as sc from '../templates/src/story-cards/params';
 import { camera as scCamera, cardIn, typedCount } from '../templates/src/story-cards/StoryCards';
 import * as pt from '../templates/src/phone-talk/params';
 import { ASK, REPLY, charIn, lineTop, rise, textRise, typed as ptTyped } from '../templates/src/phone-talk/PhoneTalk';
+import * as cw from '../templates/src/card-words/params';
+import { cardPose, dissolveAlpha, lumaInvert, panY, shadeOffset, verticalShade, wordSize } from '../templates/src/card-words/CardWords';
+import * as hc from '../templates/src/halftone-captions/params';
+import { captionSize, fadeIn, letterDelay } from '../templates/src/halftone-captions/HalftoneCaptions';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
 
@@ -247,5 +251,112 @@ describe('对着手机说话 · 对话框打字', () => {
     expect(ptTyped(3, 4, 5.5, 17)).toBe(0);
     expect(ptTyped(4, 4, 5.5, 17)).toBe(1);
     expect(ptTyped(300, 4, 5.5, 17)).toBe(17);
+  });
+});
+
+describe('截图卡片飞进来推近 · 网点大字压视频', () => {
+  it('默认 381 帧；第 176 帧溶解成第一个大字，第 233 帧切到第二个', () => {
+    const p = cw.toProps(cw.defaultParams);
+    expect(p.durationInFrames).toBe(381);
+    expect(p.words.map((w) => w.at)).toEqual([176, 233]);
+    expect(p.words.map((w) => w.text)).toEqual(['算力', '运算成本']);
+  });
+
+  it('不要卡片：第一个大字从头开始，后面的往前挪', () => {
+    const p = cw.toProps({ ...cw.defaultParams, card: '' });
+    expect(p.words.map((w) => w.at)).toEqual([0, 57]);
+    expect(p.durationInFrames).toBe(205);
+  });
+
+  it('大字按时间排好，挨得太近的往后推', () => {
+    const p = cw.toProps({ ...cw.defaultParams, words: [{ text: 'B', media: '', at: 8 }, { text: 'A', media: '', at: 7.9 }] });
+    expect(p.words.map((w) => w.text)).toEqual(['A', 'B']);
+    expect(p.words[1]!.at - p.words[0]!.at).toBeGreaterThanOrEqual(15);
+  });
+
+  it('卡片歪着从下面飞上来，第 56 帧转正；第 60 帧中心 (635,370)、1 倍', () => {
+    expect(cardPose(0).rot).toBeCloseTo(19.7, 1);
+    expect(cardPose(0).y).toBeGreaterThan(850);
+    expect(cardPose(56).rot).toBe(0);
+    const p60 = cardPose(60);
+    expect(p60.s).toBe(1);
+    expect(p60.x).toBeCloseTo(635, 0);
+    expect(p60.y).toBeCloseTo(371, 0);
+    expect(cardPose(113).s).toBeCloseTo(1.486, 3);
+  });
+
+  it('往下看：原片卡片高 460 移 247；卡片矮移得少、高移得多', () => {
+    expect(panY(100, 460)).toBeCloseTo(0, 5);
+    expect(panY(170, 460)).toBeCloseTo(-247.5, 0);
+    expect(panY(170, 240)).toBeGreaterThan(-100);
+    expect(panY(170, 700)).toBeLessThan(-400);
+  });
+
+  it('右边暗影第 72 帧开始滑进来，第 104 帧到位', () => {
+    expect(shadeOffset(60)).toBe(560);
+    expect(shadeOffset(84)).toBe(140);
+    expect(shadeOffset(104)).toBe(0);
+  });
+
+  it('按亮度溶解：亮的先没，暗的后没', () => {
+    expect(dissolveAlpha(255, -6)).toBe(1);
+    expect(dissolveAlpha(196, 2.5)).toBeCloseTo(0.5, 5);
+    expect(dissolveAlpha(240, 4)).toBeLessThan(dissolveAlpha(40, 4));
+    expect(dissolveAlpha(0, 22)).toBe(0);
+  });
+
+  it('大字：两个字 227px，四个字按宽 997 缩小', () => {
+    expect(wordSize('算力')).toBe(227);
+    expect(wordSize('运算成本')).toBeCloseTo(203, 0);
+    expect(wordSize('一二三四五六')).toBeLessThan(wordSize('运算成本'));
+  });
+});
+
+describe('截图卡片 · 溶解细节', () => {
+  it('亮度反相：白变黑、黑变白、中灰不变，颜色保留', () => {
+    const m = lumaInvert(1).split(/\s+/).map(Number);
+    const ap = (c: number[]) => [0, 1, 2].map((r) => m[r * 5]! * c[0]! + m[r * 5 + 1]! * c[1]! + m[r * 5 + 2]! * c[2]! + m[r * 5 + 4]!);
+    expect(ap([1, 1, 1]).every((v) => Math.abs(v) < 1e-3)).toBe(true);
+    expect(ap([0, 0, 0])).toEqual([1, 1, 1]);
+    expect(ap([0.5, 0.5, 0.5]).every((v) => Math.abs(v - 0.5) < 1e-3)).toBe(true);
+    expect(lumaInvert(0).split(/\s+/).map(Number).slice(0, 5)).toEqual([1, 0, 0, 0, 0]);
+  });
+
+  it('推近前没有上下暗影，往下看以后上边比下边暗', () => {
+    expect(verticalShade(60).every((v) => v === 1)).toBe(true);
+    const a = verticalShade(110);
+    expect(a[a.length - 1]!).toBeLessThan(a[0]!);
+    const b = verticalShade(170);
+    expect(b[0]!).toBeLessThan(b[b.length - 1]!);
+  });
+});
+
+describe('视频上的网点大字 · 英文小字', () => {
+  it('默认 172 帧；第 45、67 帧切到下一段', () => {
+    const p = hc.toProps(hc.defaultParams);
+    expect(p.durationInFrames).toBe(172);
+    expect(p.captions.map((c) => c.at)).toEqual([0, 45, 67]);
+    expect(p.captions[0]!.english).toBe('Frontier Engineering');
+  });
+
+  it('第一段不从 0 开始：整体往前挪；挨得太近的往后推', () => {
+    const p = hc.toProps({ ...hc.defaultParams, captions: [{ text: 'A', english: '', media: '', at: 2 }, { text: 'B', english: '', media: '', at: 2.1 }], duration: 6 });
+    expect(p.captions.map((c) => c.at)).toEqual([0, 15]);
+    expect(p.durationInFrames).toBe(120);
+  });
+
+  it('四个字 148px，字少了最大 160', () => {
+    expect(captionSize('前沿工程')).toBeCloseTo(148, 0);
+    expect(captionSize('算力')).toBe(160);
+  });
+
+  it('第一个字第 4–20 帧淡进来；英文字母各自晚 0–6 帧', () => {
+    expect(fadeIn(3)).toBe(0);
+    expect(fadeIn(12)).toBeCloseTo(0.56, 5);
+    expect(fadeIn(20)).toBe(1);
+    const ds = Array.from({ length: 20 }, (_, i) => letterDelay(i));
+    expect(Math.min(...ds)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...ds)).toBeLessThan(6);
+    expect(new Set(ds.map((d) => d.toFixed(2))).size).toBeGreaterThan(10);
   });
 });

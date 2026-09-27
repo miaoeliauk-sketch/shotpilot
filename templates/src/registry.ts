@@ -97,6 +97,10 @@ import { StoryCards } from './story-cards/StoryCards';
 import * as storyCards from './story-cards/params';
 import { PhoneTalk } from './phone-talk/PhoneTalk';
 import * as phoneTalk from './phone-talk/params';
+import { CardWords } from './card-words/CardWords';
+import * as cardWords from './card-words/params';
+import { HalftoneCaptions } from './halftone-captions/HalftoneCaptions';
+import * as halftoneCaptions from './halftone-captions/params';
 
 /**
  * 工作台里能用的模板。
@@ -355,6 +359,16 @@ export const TEMPLATES: TemplateDef[] = [
     ...phoneTalk.meta,
     component: PhoneTalk,
     toProps: (p) => phoneTalk.toProps(p as unknown as phoneTalk.PhoneTalkParams),
+  },
+  {
+    ...cardWords.meta,
+    component: CardWords,
+    toProps: (p) => cardWords.toProps(p as unknown as cardWords.CardWordsParams),
+  },
+  {
+    ...halftoneCaptions.meta,
+    component: HalftoneCaptions,
+    toProps: (p) => halftoneCaptions.toProps(p as unknown as halftoneCaptions.HalftoneCaptionsParams),
   },
 ];
 
