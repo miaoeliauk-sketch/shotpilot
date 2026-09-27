@@ -28,6 +28,10 @@ export const BUNDLED_FONTS = {
   playfairItalic: { family: 'ShotPilot Playfair Italic', file: 'PlayfairDisplay-Italic.ttf', weight: '100 900' },
   /** 半粗斜体（红色英文） */
   barlowItalic: { family: 'ShotPilot Barlow Italic', file: 'Barlow-SemiBoldItalic.ttf', weight: '100 900' },
+  /** 圆润的几何粗体（大号分数数字） */
+  poppinsBold: { family: 'ShotPilot Poppins Bold', file: 'Poppins-Bold.ttf', weight: '100 900' },
+  /** 窄体中粗（表格里的英文名字） */
+  barlowCondensed: { family: 'ShotPilot Barlow Condensed', file: 'BarlowCondensed-Medium.ttf', weight: '100 900' },
 } as const;
 
 type FontKey = keyof typeof BUNDLED_FONTS;

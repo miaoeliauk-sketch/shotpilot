@@ -22,6 +22,9 @@ import { cardPose, dissolveAlpha, lumaInvert, panY, shadeOffset, verticalShade, 
 import * as hc from '../templates/src/halftone-captions/params';
 import { captionSize, fadeIn, letterDelay } from '../templates/src/halftone-captions/HalftoneCaptions';
 import * as tst from '../templates/src/title-score-table/params';
+import * as wcp from '../templates/src/web-compare-pixels/params';
+import { barWipe, darkCamera, lensParams, squareLit, webCamera, wipeX } from '../templates/src/web-compare-pixels/WebComparePixels';
+import { DARK_CAM, WEB_CAM } from '../templates/src/web-compare-pixels/camera';
 import { FLOATERS, TABLE, cameraY, drift, floatLead, gridValue, settle, typedCount as tstTyped } from '../templates/src/title-score-table/TitleScoreTable';
 
 const raw = (p: unknown) => p as Record<string, unknown>;
@@ -414,5 +417,45 @@ describe('错落宋体大标题 · 镜头下甩 · 分数表', () => {
     expect(hi - lo).toBeGreaterThan(5);
     expect(hi - lo).toBeLessThan(60);
     expect(gridValue(3, 7)).toBe(gridValue(3, 7));
+  });
+});
+
+describe('网页截图推拉 · 暗色对比表 · 像素方块标签', () => {
+  it('默认 679 帧；两行两标签，赢的项数夹在 0 到总数之间', () => {
+    const p = wcp.toProps(wcp.defaultParams);
+    expect(p.durationInFrames).toBe(679);
+    expect(p.rows).toHaveLength(2);
+    expect(p.labels.map((l) => l.wins)).toEqual([6, 8]);
+    expect(p.focusStart[0]).toBeCloseTo(0.603, 3);
+    const q = wcp.toProps({ ...wcp.defaultParams, total: 6, labels: [{ text: 'A', wins: 99, pill: '' }] });
+    expect(q.labels[0]!.wins).toBe(6);
+  });
+
+  it('镜头关键帧按时间递增；网页开头 8 倍特写，第 66 帧拉到整页', () => {
+    for (const t of [WEB_CAM.t, DARK_CAM.t]) for (let i = 1; i < t.length; i++) expect(t[i]!).toBeGreaterThan(t[i - 1]!);
+    expect(webCamera(0).w / webCamera(66).w).toBeGreaterThan(8);
+    expect(Math.abs(webCamera(124).r)).toBeGreaterThan(5);
+    expect(darkCamera(220).s).toBeCloseTo(1, 2);
+    expect(darkCamera(600).s).toBeGreaterThan(1.8);
+  });
+
+  it('斜切从左扫到右；条 32 帧刷满', () => {
+    expect(wipeX(124)).toBeLessThan(0);
+    expect(wipeX(140)).toBeGreaterThan(1280);
+    expect(barWipe(168, 168)).toBe(0);
+    expect(barWipe(184, 168)).toBeGreaterThan(0.5);
+    expect(barWipe(200, 168)).toBe(1);
+  });
+
+  it('橙色方块从下排左边开始涂，下排满了再涂上排', () => {
+    const lit = (wins: number) => Array.from({ length: 14 }, (_, k) => (squareLit(k, wins) ? 1 : 0)).join('');
+    expect(lit(6)).toBe('00000001111110');
+    expect(lit(8)).toBe('10000001111111');
+  });
+
+  it('景深：开头左边虚，第 404 帧起焦点落到下面', () => {
+    expect(lensParams(200).b150).toBeGreaterThan(0);
+    expect(lensParams(500).b150).toBe(0);
+    expect(lensParams(500).edge).toBe(470);
   });
 });

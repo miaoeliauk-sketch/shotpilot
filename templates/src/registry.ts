@@ -103,6 +103,8 @@ import { HalftoneCaptions } from './halftone-captions/HalftoneCaptions';
 import * as halftoneCaptions from './halftone-captions/params';
 import { TitleScoreTable } from './title-score-table/TitleScoreTable';
 import * as titleScoreTable from './title-score-table/params';
+import { WebComparePixels } from './web-compare-pixels/WebComparePixels';
+import * as webComparePixels from './web-compare-pixels/params';
 
 /**
  * 工作台里能用的模板。
@@ -376,6 +378,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...titleScoreTable.meta,
     component: TitleScoreTable,
     toProps: (p) => titleScoreTable.toProps(p as unknown as titleScoreTable.TitleScoreTableParams),
+  },
+  {
+    ...webComparePixels.meta,
+    component: WebComparePixels,
+    toProps: (p) => webComparePixels.toProps(p as unknown as webComparePixels.WebComparePixelsParams),
   },
 ];
 
