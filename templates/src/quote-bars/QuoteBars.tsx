@@ -214,7 +214,7 @@ const Bar: React.FC<{ text: string; top: number; frame: number; at: number }> = 
   return (
     <div
       style={{
-        position: 'absolute', left: BAR.left + dx, top, width: w, height: h, background: '#ebedeb', boxShadow: '0 6px 14px rgba(0,0,0,0.35)',
+        position: 'absolute', left: BAR.left, top, width: w, height: h, transform: `translateX(${dx.toFixed(2)}px)`, background: '#ebedeb', boxShadow: '0 6px 14px rgba(0,0,0,0.35)',
         WebkitMaskImage: mask, maskImage: mask,
       }}
     >

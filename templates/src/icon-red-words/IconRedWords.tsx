@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { Media } from '../media';
@@ -46,7 +47,7 @@ const POSE_S = [1.12, 1.11, 1.1, 1.095, 1.085, 1.065, 1.05, 1.035, 1.03, 1.02, 1
 const POSE_TILT = [-18, -17, -16, -14, -12, -8, -5, -3, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 export function iconPose(frame: number) {
-  const f = (v: number[]) => interpolate(frame, POSE_T, v, clamp);
+  const f = (v: number[]) => smoothTrack(frame, POSE_T, v);
   return { x: f(POSE_X), y: f(POSE_Y), rot: f(POSE_R), s: f(POSE_S), tilt: f(POSE_TILT), opacity: interpolate(frame, [0, 10], [0.3, 1], clamp) };
 }
 
@@ -154,8 +155,8 @@ export const IconTile: React.FC<{ pose: ReturnType<typeof iconPose>; text: strin
     <div style={{ position: 'absolute', left: 0, top: 0, width: 1280, height: 720, perspective: 1400, perspectiveOrigin: `${pose.x}px ${pose.y}px` }}>
       <div
         style={{
-          position: 'absolute', left: pose.x - size / 2, top: pose.y - size / 2, width: size, height: size, opacity: pose.opacity,
-          transform: `rotate(${pose.rot.toFixed(2)}deg) rotateX(${pose.tilt.toFixed(2)}deg) scale(${pose.s.toFixed(4)})`,
+          position: 'absolute', left: 0, top: 0, width: size, height: size, opacity: pose.opacity,
+          transform: `translate(${(pose.x - size / 2).toFixed(2)}px, ${(pose.y - size / 2).toFixed(2)}px) rotate(${pose.rot.toFixed(2)}deg) rotateX(${pose.tilt.toFixed(2)}deg) scale(${pose.s.toFixed(4)})`,
         }}
       >
         {/* 厚度 + 投影 */}

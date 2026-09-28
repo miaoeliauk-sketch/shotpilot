@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, random, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { Media } from '../media';
 
@@ -78,7 +79,7 @@ export function orbitProgress(frame: number, labels: OrbitLabel[]): number {
 
 export const OrbitLabels: React.FC<OrbitLabelsProps> = (p) => {
   const frame = useCurrentFrame();
-  const s = interpolate(frame, CAM_T, CAM_S, clamp);
+  const s = smoothTrack(frame, CAM_T, CAM_S);
   const cam = `translate(${CAM_ANCHOR.x}px, ${CAM_ANCHOR.y}px) scale(${s}) translate(${-CAM_ANCHOR.x}px, ${-CAM_ANCHOR.y}px)`;
   const orbit = orbitProgress(frame, p.labels);
   const firstAngle = p.labels.length ? SIDES[[...p.labels].sort((a, b) => a.at - b.at)[0]!.side].angle : 0;

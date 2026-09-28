@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, random, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl, bundledUrl } from '../asset';
 import { useBundledFont, BUNDLED_FONTS } from '../fonts';
 import { TiltShift, vignetteGradient } from '../lens';
@@ -105,8 +106,8 @@ export const NameplateStory: React.FC<NameplateStoryProps> = (p) => {
   const t = canonTime(frame, p);
   useBundledFont('bebas');
   useBundledFont('oswald');
-  const camX = interpolate(t, CAM_T, CAM_X, clamp);
-  const camY = interpolate(t, CAM_T, CAM_Y, clamp);
+  const camX = smoothTrack(t, CAM_T, CAM_X);
+  const camY = smoothTrack(t, CAM_T, CAM_Y);
 
   const light = (
     <AbsoluteFill style={{ backgroundColor: '#d6d6d6', overflow: 'hidden' }}>
@@ -143,8 +144,8 @@ export const NameplateStory: React.FC<NameplateStoryProps> = (p) => {
 
 /** 铭牌：台座 + 台面 + 斜放的 logo 方块 + 名字（字母一个个歪着掉下来） */
 const Nameplate: React.FC<{ logo: string; name: string; x: number; y: number; t: number; nameAt: number; bounce?: boolean }> = ({ logo, name, x, y, t, nameAt, bounce }) => {
-  const ty = bounce ? interpolate(t, TILE_T, TILE_Y, clamp) : 0;
-  const rot = bounce ? interpolate(t, TILE_T, TILE_R, clamp) : 3;
+  const ty = bounce ? smoothTrack(t, TILE_T, TILE_Y) : 0;
+  const rot = bounce ? smoothTrack(t, TILE_T, TILE_R) : 3;
   const letters = Array.from(name);
   const font = `700 ${PLATE.nameSize}px ${SERIF}`;
   const total = measure(name, font);
@@ -184,7 +185,7 @@ const Nameplate: React.FC<{ logo: string; name: string; x: number; y: number; t:
       {/* logo 方块 */}
       <div
         style={{
-          position: 'absolute', left: PLATE.tileX, top: PLATE.tileY + ty, width: PLATE.tile, height: PLATE.tile, transform: `rotate(${rot}deg)`,
+          position: 'absolute', left: PLATE.tileX, top: PLATE.tileY, width: PLATE.tile, height: PLATE.tile, transform: `translateY(${ty.toFixed(2)}px) rotate(${rot}deg)`,
           backgroundColor: '#fbfbfb', borderRadius: 10, boxShadow: '0 12px 16px rgba(0,0,0,0.35), inset 0 0 0 2px #d0d0d0', overflow: 'hidden',
         }}
       >

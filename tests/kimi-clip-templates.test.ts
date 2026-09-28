@@ -192,7 +192,21 @@ describe('长网页滚到顶 · 推近 · 翻译标签', () => {
     expect(scrollOffset(67, 1292)).toBe(0);
     expect(scrollOffset(20, 1292)).toBeLessThan(scrollOffset(10, 1292));
     expect(zoom(67).s).toBeCloseTo(1, 3);
-    expect(zoom(117).s).toBeCloseTo(1 / 0.5682, 3);
+    expect(zoom(147).s).toBeCloseTo(1.8, 3);
+  });
+
+  it('推近接着滚动停下的位置开始，不管焦点在哪都不跳；最后焦点到画面中间', () => {
+    for (const [fx, fy] of [[542, 170], [540, 232], [300, 900]] as const) {
+      const a = zoom(67, fx, fy);
+      expect(a.x - fx * a.s).toBeCloseTo(0, 6);
+      expect(a.y - fy * a.s).toBeCloseTo(0, 6);
+      const b = zoom(68, fx, fy);
+      expect(Math.abs(b.x - fx)).toBeLessThan(2);
+      expect(Math.abs(b.y - fy)).toBeLessThan(2);
+      const end = zoom(131, fx, fy);
+      expect(end.x).toBeCloseTo(640.8, 0);
+      expect(end.y).toBeCloseTo(360, 0);
+    }
   });
 
   it('标签从左往右长出来，第二条晚 2 帧；网页高度最少 720', () => {

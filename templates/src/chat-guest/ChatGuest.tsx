@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
@@ -40,7 +41,7 @@ const CAM_S = [0.8798, 0.882, 0.8844, 0.8886, 0.894, 0.9162, 0.9504, 0.9681, 0.9
 const CAM_X = [898.3, 898.6, 899.1, 900.3, 901.9, 908.5, 918.4, 923.6, 925.6, 926.2];
 
 export function camera(frame: number) {
-  return { s: interpolate(frame, CAM_T, CAM_S, clamp), x: interpolate(frame, CAM_T, CAM_X, clamp), y: 360 };
+  return { s: smoothTrack(frame, CAM_T, CAM_S), x: smoothTrack(frame, CAM_T, CAM_X), y: 360 };
 }
 
 /** 对话条：长出来（横 14–20 帧、竖 10 帧）、10 帧后开始打字 */

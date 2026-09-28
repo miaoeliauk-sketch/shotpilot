@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { Media } from '../media';
@@ -59,10 +60,13 @@ const PUSH_S = [0.9164, 0.917, 0.919, 0.9237, 0.93, 0.948, 0.97, 0.9887, 1, 1.00
 /** 表格的位置：中心点、缩放、角度（t 从飞进来那一帧算） */
 export function sheetPose(t: number) {
   if (t < 16) {
-    return { x: interpolate(t, IN_T, IN_X, clamp), y: interpolate(t, IN_T, IN_Y, clamp), s: interpolate(t, IN_T, IN_S, clamp), rot: interpolate(t, IN_T, IN_R, clamp) };
+    return { x: smoothTrack(t, IN_T, IN_X), y: smoothTrack(t, IN_T, IN_Y), s: smoothTrack(t, IN_T, IN_S), rot: smoothTrack(t, IN_T, IN_R) };
   }
-  return { x: 650, y: 350, s: interpolate(t, PUSH_T, PUSH_S, clamp), rot: 0 };
+  return { x: 650, y: 350, s: smoothTrack(t, PUSH_T, PUSH_S), rot: 0 };
 }
+
+/** 推近正好经过 1 倍的那一帧浏览器会换一种方式对齐画字，整张表闪一下半个像素；让缩放绕开正好 1 */
+const notOne = (s: number) => (Math.abs(s - 1) < 0.0002 ? (s < 1 ? 0.9998 : 1.0002) : s);
 
 /** 一栏写到第几个字：每 8 帧一个 */
 export function written(t: number, field: SheetField): number {
@@ -88,7 +92,7 @@ export const RecordSheet: React.FC<RecordSheetProps> = (p) => {
       <div
         style={{
           position: 'absolute', left: SHEET.x, top: SHEET.y, width: SHEET.w, height: SHEET.h, transformOrigin: `${SHEET.cx - SHEET.x}px ${SHEET.cy - SHEET.y}px`,
-          transform: `translate(${(pose.x - SHEET.cx).toFixed(1)}px, ${(pose.y - SHEET.cy).toFixed(1)}px) rotate(${pose.rot.toFixed(2)}deg) scale(${pose.s.toFixed(4)})`,
+          transform: `translate(${(pose.x - SHEET.cx).toFixed(1)}px, ${(pose.y - SHEET.cy).toFixed(1)}px) rotate(${pose.rot.toFixed(2)}deg) scale(${notOne(pose.s).toFixed(4)})`,
           boxShadow: '14px 20px 36px rgba(0,0,0,0.45)',
         }}
       >

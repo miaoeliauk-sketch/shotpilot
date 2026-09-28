@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { Media } from '../media';
@@ -64,14 +65,14 @@ export const CARDS: PaperSlot[] = [
 ];
 
 export function camera(frame: number) {
-  return { s: interpolate(frame, CAM_T, CAM_S, clamp), dx: interpolate(frame, CAM_T, CAM_DX, clamp) };
+  return { s: smoothTrack(frame, CAM_T, CAM_S), dx: smoothTrack(frame, CAM_T, CAM_DX) };
 }
 
 export const LogoTitleCards: React.FC<LogoTitleCardsProps> = (p) => {
   const frame = useCurrentFrame();
   useBundledFont('vibes');
   const cam = camera(frame);
-  const slide = interpolate(frame, SLIDE_T, SLIDE_X, clamp);
+  const slide = smoothTrack(frame, SLIDE_T, SLIDE_X);
   const boxU = interpolate(frame, [40, 70], [0, 1], clamp);
   const discU = interpolate(frame, [p.discAt, p.discAt + 16], [0, 1], clamp);
   const slots = CARDS.map((c) => ({ ...c, at: c.at + p.cardsAt }));
@@ -105,7 +106,7 @@ export const LogoTitleCards: React.FC<LogoTitleCardsProps> = (p) => {
           />
         )}
         {/* 标题：从 logo 方块后面滑出来 */}
-        <div style={{ position: 'absolute', left: TITLE.left + slide, top: TITLE.baseline - TITLE.size * 0.95, height: TITLE.size * 1.2, lineHeight: `${TITLE.size * 1.2}px`, whiteSpace: 'pre', fontFamily: SANS, fontWeight: TITLE.weight, fontSize: TITLE.size, color: '#15150f', transform: `scaleX(${TITLE.squeeze})`, transformOrigin: '0 50%', opacity: titleU, filter: titleU < 1 ? `blur(${(3 * (1 - titleU)).toFixed(1)}px)` : undefined }}>
+        <div style={{ position: 'absolute', left: TITLE.left, top: TITLE.baseline - TITLE.size * 0.95, height: TITLE.size * 1.2, lineHeight: `${TITLE.size * 1.2}px`, whiteSpace: 'pre', fontFamily: SANS, fontWeight: TITLE.weight, fontSize: TITLE.size, color: '#15150f', transform: `translateX(${slide.toFixed(2)}px) scaleX(${TITLE.squeeze})`, transformOrigin: '0 50%', opacity: titleU, filter: titleU < 1 ? `blur(${(3 * (1 - titleU)).toFixed(1)}px)` : undefined }}>
           {before}
           {goldPart && (
             <span style={{ color: 'transparent', backgroundImage: 'linear-gradient(to bottom, #f6e3a8 5%, #d9a93c 45%, #b17a1c 70%, #f0d58a 95%)', WebkitBackgroundClip: 'text', backgroundClip: 'text' }}>{goldPart}</span>

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { bundledUrl } from '../asset';
 import { TiltShift, vignetteGradient } from '../lens';
 import { measure } from '../text-layout';
@@ -77,7 +78,7 @@ export function articleCamera(frame: number, p: Pick<ArticleMarkerProps, 'pullBa
   let s = 1;
   let pos: number[] = [C[0], C[1]];
   if (p.pullBack) {
-    const e = interpolate(frame, PULL.t, PULL.e, clamp);
+    const e = smoothTrack(frame, PULL.t, PULL.e);
     const s0 = PULL.from;
     const pos0 = [C[0] - s0 * (PULL.center[0]! - C[0]), C[1] - s0 * (PULL.center[1]! - C[1])];
     s = s0 + (1 - s0) * e;

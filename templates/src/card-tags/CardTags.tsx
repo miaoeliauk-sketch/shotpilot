@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
@@ -50,9 +51,9 @@ const EXIT_O = [1, 1, 1, 0.85, 0.6, 0.3, 0];
 export function cardExit(frame: number, exitAt: number) {
   const t = frame - exitAt;
   return {
-    dx: interpolate(t, EXIT_T, EXIT_X, clamp),
-    dy: interpolate(t, EXIT_T, EXIT_Y, clamp),
-    rot: CARD.rot + interpolate(t, EXIT_T, EXIT_R, clamp),
+    dx: smoothTrack(t, EXIT_T, EXIT_X),
+    dy: smoothTrack(t, EXIT_T, EXIT_Y),
+    rot: CARD.rot + smoothTrack(t, EXIT_T, EXIT_R),
     opacity: interpolate(t, EXIT_T, EXIT_O, clamp),
   };
 }

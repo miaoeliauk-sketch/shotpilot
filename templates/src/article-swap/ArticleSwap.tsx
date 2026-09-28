@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { EdgeBlur, vignetteGradient } from '../lens';
 import { layoutBody, type BodyBox } from '../text-layout';
 
@@ -51,16 +52,16 @@ const P2_S = [1.54, 1.5402, 1.5271, 1.5141, 1.4924, 1.4564, 1.393, 1.3374, 1.222
 /** 第一篇的镜头：横移（屏幕像素）和缩放（以画面中心）；换篇前 6 帧开始缩小 */
 export function firstCamera(frame: number, swapAt: number) {
   const out = frame - (swapAt + 6);
-  const hold = interpolate(frame, [30, 36, 40, 48, 52], [1, 0.9971, 0.995, 0.9915, 0.9877], clamp);
+  const hold = smoothTrack(frame, [30, 36, 40, 48, 52], [1, 0.9971, 0.995, 0.9915, 0.9877]);
   return {
-    dx: interpolate(frame, P1_T, P1_X, clamp),
-    s: out <= 0 ? hold : hold * interpolate(out + 56, P1_OUT_T, P1_OUT_S, clamp),
+    dx: smoothTrack(frame, P1_T, P1_X),
+    s: out <= 0 ? hold : hold * smoothTrack(out + 56, P1_OUT_T, P1_OUT_S),
   };
 }
 
 /** 第二篇的缩放（以画面中心），从 swapAt 起算 */
 export function secondScale(frame: number, swapAt: number): number {
-  return interpolate(frame - swapAt, P2_T, P2_S, clamp);
+  return smoothTrack(frame - swapAt, P2_T, P2_S);
 }
 
 /** 米黄条的高度（从底边往上长） */

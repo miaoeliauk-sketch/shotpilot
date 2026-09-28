@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { vignetteGradient } from '../lens';
@@ -69,17 +70,17 @@ const CAM3_T = [0, 1, 2, 3, 4, 5, 7, 9, 11, 13, 15, 17, 19, 23, 27, 32, 37, 42, 
 const CAM3_S = [1.4149, 1.3686, 1.3321, 1.3076, 1.2846, 1.2636, 1.2316, 1.2041, 1.1803, 1.16, 1.1367, 1.122, 1.1045, 1.0862, 1.0705, 1.0475, 1.0304, 1.0214, 1.0135, 1.0072, 1.0035, 1, 0.9968, 0.9937];
 
 export function camera1(frame: number): number {
-  return interpolate(frame, CAM1_T, CAM1_S, clamp);
+  return smoothTrack(frame, CAM1_T, CAM1_S);
 }
 
 export function camera2(rel: number, toCut: number): number {
-  const base = rel <= 50 ? interpolate(rel, CAM2_T, CAM2_S, clamp) : 1 - 0.0062 * (rel - 50);
-  return base * interpolate(toCut, CAM2_END_T, CAM2_END_K, clamp);
+  const base = rel <= 50 ? smoothTrack(rel, CAM2_T, CAM2_S) : 1 - 0.0062 * (rel - 50);
+  return base * smoothTrack(toCut, CAM2_END_T, CAM2_END_K);
 }
 
 /** toEnd = 帧 − 品牌段结束；结束前 27.5 帧开始匀速推近 */
 export function camera3(rel: number, toEnd: number): number {
-  const base = rel <= 97 ? interpolate(rel, CAM3_T, CAM3_S, clamp) : 0.9937 - 0.00032 * (rel - 97);
+  const base = rel <= 97 ? smoothTrack(rel, CAM3_T, CAM3_S) : 0.9937 - 0.00032 * (rel - 97);
   return base + 0.013 * Math.max(0, toEnd + 27.5);
 }
 
@@ -369,9 +370,9 @@ const BrandScene: React.FC<{ p: TitleNumberBrandProps; frame: number }> = ({ p, 
   const moon = (m: { cx: number; cy: number; r: number }, dy: number, src: string, flip: boolean) => {
     const cx = 640 + cam * (m.cx - 640);
     const cy = 360 + cam * (m.cy - 360) + dy;
-    const r = m.r * cam;
+    // 位置、大小都用 transform（left/top/宽高会按整像素走，慢慢推的时候一顿一顿）
     return (
-      <Img src={assetUrl(src)} style={{ position: 'absolute', left: cx - r, top: cy - r, width: 2 * r, height: 2 * r, transform: flip ? 'scale(-1, -1)' : undefined, filter: 'blur(1.2px)' }} />
+      <Img src={assetUrl(src)} style={{ position: 'absolute', left: m.cx - m.r, top: m.cy - m.r, width: 2 * m.r, height: 2 * m.r, transform: `translate(${(cx - m.cx).toFixed(2)}px, ${(cy - m.cy).toFixed(2)}px) scale(${(flip ? -1 : 1) * cam}, ${(flip ? -1 : 1) * cam})`, filter: 'blur(1.2px)' }} />
     );
   };
   const textStyle: React.CSSProperties = { position: 'absolute', top: lay.top, whiteSpace: 'pre', fontFamily: SANS, fontWeight: 700, fontSize: BRAND.size, lineHeight: 1, letterSpacing: BRAND.spacing };
@@ -379,9 +380,9 @@ const BrandScene: React.FC<{ p: TitleNumberBrandProps; frame: number }> = ({ p, 
   const clipFont: React.CSSProperties = { fontFamily: SANS, fontWeight: 700, fontSize: BRAND.size, letterSpacing: BRAND.spacing };
   return (
     <AbsoluteFill style={{ backgroundColor: '#0f0f0f' }}>
-      {p.moonA && moon(MOON_A, interpolate(rel, MOON_A_DY.t, MOON_A_DY.y, clamp), p.moonA, false)}
+      {p.moonA && moon(MOON_A, smoothTrack(rel, MOON_A_DY.t, MOON_A_DY.y), p.moonA, false)}
       {/* 两个用同一张图时，左下那个转过来，看着不一样 */}
-      {p.moonB && moon(MOON_B, interpolate(rel, MOON_B_DY.t, MOON_B_DY.y, clamp), p.moonB, sameMoon)}
+      {p.moonB && moon(MOON_B, smoothTrack(rel, MOON_B_DY.t, MOON_B_DY.y), p.moonB, sameMoon)}
       <AbsoluteFill style={{ transformOrigin: '640px 360px', transform: `scale(${cam.toFixed(4)})` }}>
         {/* 背后很淡的大字：描边 + 月面纹理，一个字一个字从上往下显出来 */}
         {chars.map((ch, i) => {

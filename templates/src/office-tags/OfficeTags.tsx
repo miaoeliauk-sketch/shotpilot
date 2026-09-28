@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { bundledUrl } from '../asset';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
@@ -57,7 +58,7 @@ const TAG = { w: 205, h: 110 };
 export const TITLE = { left: 776, baseline: 292, size: 206, squeeze: 0.74 };
 
 export function wideCamera(t: number) {
-  return { s: interpolate(t, CAM_T, CAM_S, clamp), x: interpolate(t, CAM_T, CAM_X, clamp), y: interpolate(t, CAM_T, CAM_Y, clamp) };
+  return { s: smoothTrack(t, CAM_T, CAM_S), x: smoothTrack(t, CAM_T, CAM_X), y: smoothTrack(t, CAM_T, CAM_Y) };
 }
 
 export const OfficeTags: React.FC<OfficeTagsProps> = (p) => {

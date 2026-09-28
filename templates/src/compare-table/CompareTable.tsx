@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { EdgeBlur, vignetteGradient } from '../lens';
 
 /**
@@ -43,7 +44,7 @@ const CAM_T = [0, 4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 50, 56, 63, 70, 76, 
 const CAM_S = [0.88, 0.9069, 0.932, 0.9447, 0.9556, 0.9645, 0.9721, 0.9785, 0.9838, 0.9881, 0.9916, 0.9944, 0.9978, 0.9994, 1, 0.9995, 0.9982, 0.9961, 0.9933];
 
 export function cameraScale(frame: number): number {
-  return interpolate(frame, CAM_T, CAM_S, { extrapolateLeft: 'clamp', extrapolateRight: 'extend' });
+  return smoothTrack(frame, CAM_T, CAM_S, true);
 }
 
 /** 第 k 格（按阅读顺序：表头 0–2，之后每行 3 格）亮起来的程度 */

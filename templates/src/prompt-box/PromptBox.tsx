@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { vignetteGradient } from '../lens';
 import { measure } from '../text-layout';
 
@@ -46,9 +47,9 @@ const C2_R = [1.08, 1.05, 0.73, 0.64, 0.32, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 /** 镜头：世界点 (640,360) 在屏幕上的位置 x/y、缩放 s、转角 r（度） */
 export function camera(frame: number) {
   if (frame < 30) {
-    return { x: interpolate(frame, C1_T, C1_X, clamp), y: interpolate(frame, C1_T, C1_Y, clamp), s: interpolate(frame, C1_T, C1_S, clamp), r: interpolate(frame, C1_T, C1_R, clamp) };
+    return { x: smoothTrack(frame, C1_T, C1_X), y: smoothTrack(frame, C1_T, C1_Y), s: smoothTrack(frame, C1_T, C1_S), r: smoothTrack(frame, C1_T, C1_R) };
   }
-  return { x: interpolate(frame, C2_T, C2_X, clamp), y: interpolate(frame, C2_T, C2_Y, clamp), s: interpolate(frame, C2_T, C2_S, clamp), r: interpolate(frame, C2_T, C2_R, clamp) };
+  return { x: smoothTrack(frame, C2_T, C2_X), y: smoothTrack(frame, C2_T, C2_Y), s: smoothTrack(frame, C2_T, C2_S), r: smoothTrack(frame, C2_T, C2_R) };
 }
 
 /** 框线上下两条的头尾（沿线的长度，0 = 左边中点，1150 = 右边中点） */

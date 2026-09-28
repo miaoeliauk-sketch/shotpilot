@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { bundledUrl } from '../asset';
 import { Media } from '../media';
 import { layoutBody, measure, type BodyChar } from '../text-layout';
@@ -105,7 +106,7 @@ export const NewsScreenshot: React.FC<NewsScreenshotProps> = (p) => {
   const settle = (341 - ((barScreenAtZoom - ZOOM.fixY) * ZOOM.to + ZOOM.fixY)) * z;
 
   const tp = frame - p.photoAt;
-  const photoTop = interpolate(tp, PHOTO_T, PHOTO_Y, clamp);
+  const photoTop = smoothTrack(tp, PHOTO_T, PHOTO_Y);
   const push = Math.max(0, photoTop + PHOTO.height - 21);
   const articleCam = `translate(0px, ${settle + push}px) translate(${ZOOM.fixX}px, ${ZOOM.fixY}px) scale(${s}) translate(${-ZOOM.fixX}px, ${-ZOOM.fixY}px)`;
 

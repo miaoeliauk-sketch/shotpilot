@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { Media } from '../media';
@@ -60,7 +61,7 @@ const CAM_Y = [470, 447.3, 430.1, 414.4, 401, 380.7, 367.5, 360, 360, 360, 360, 
 export function camera(frame: number, swapAt: number) {
   const k = swapAt / 300;
   const t = frame <= swapAt ? frame / Math.max(0.01, k) : 300 + (frame - swapAt);
-  return { s: interpolate(t, CAM_T, CAM_S, clamp), x: interpolate(t, CAM_T, CAM_X, clamp), y: interpolate(t, CAM_T, CAM_Y, clamp) };
+  return { s: smoothTrack(t, CAM_T, CAM_S), x: smoothTrack(t, CAM_T, CAM_X), y: smoothTrack(t, CAM_T, CAM_Y) };
 }
 
 /** 提问条：长出来的进度、打到第几个字、离开的进度 */

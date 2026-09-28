@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { Media } from '../media';
 
@@ -43,8 +44,8 @@ const WHIP_Y = [0, 10, 35, 60, 93, 150];
 
 /** 世界点 (640, 415) 在屏幕上的 y，和缩放；exitAt = 开始往下甩的帧 */
 export function camera(frame: number, exitAt: number) {
-  const s = interpolate(frame, CAM_T, CAM_S, clamp);
-  const y = interpolate(frame, CAM_T, CAM_Y, clamp) + (frame < 30 ? interpolate(frame, DROP_T, DROP_Y, clamp) : 0);
+  const s = smoothTrack(frame, CAM_T, CAM_S);
+  const y = smoothTrack(frame, CAM_T, CAM_Y) + (frame < 30 ? smoothTrack(frame, DROP_T, DROP_Y) : 0);
   const whip = frame > exitAt ? interpolate(frame - exitAt, WHIP_T, WHIP_Y, { extrapolateLeft: 'clamp', extrapolateRight: 'extend' }) : 0;
   return { s, y, whip };
 }

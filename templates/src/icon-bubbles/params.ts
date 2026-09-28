@@ -19,7 +19,7 @@ export const defaultParams: IconBubblesParams = {
   background: `${A}/grid-paper.jpg`,
   // 原片：三行分别在第 0、79、146 帧出来；前两行每秒打 15 个字，最后一行慢慢「想」
   rows: [
-    { icon: `${A}/magnifier.png`, text: '抱歉，为搜索到相关信息...', at: 0, speed: 15 },
+    { icon: `${A}/magnifier.png`, text: '抱歉，未搜索到相关信息...', at: 0, speed: 15 },
     { icon: `${A}/brain.png`, text: '我无法解答您的问题', at: 2.63, speed: 15 },
     { icon: `${A}/aitile.png`, text: '......正在生成中', at: 4.87, speed: 3.5 },
   ],

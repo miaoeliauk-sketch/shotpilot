@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useMemo, useState } from 'react';
 import { AbsoluteFill, Easing, continueRender, delayRender, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { Media } from '../media';
 import { inkMaskUrl } from './ink';
 import { layoutBody, measure, type BodyChar, type BodyLayout } from '../text-layout';
@@ -72,9 +73,9 @@ export const SANS = '"PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", "H
 
 // ── 标题段 ────────────────────────────────────────────────────────────
 
-/** 画面缩放 S（原片第 k 帧）。0–2 帧是一片暗棕，量不出来，按 3–6 帧的趋势往前补 */
+/** 画面缩放 S（原片第 k 帧，逐帧量的再去掉测量噪声，不然拉远时背景一帧快一帧慢像在抖）。0–2 帧是一片暗棕，量不出来，按 3–6 帧的趋势往前补 */
 const CAM_K = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58];
-const CAM_S = [2.45, 2.35, 2.24, 2.1, 1.973, 1.89, 1.829, 1.79, 1.754, 1.721, 1.673, 1.641, 1.611, 1.585, 1.558, 1.53, 1.506, 1.484, 1.461, 1.441, 1.415, 1.396, 1.376, 1.361, 1.337, 1.321, 1.302, 1.271, 1.241, 1.217, 1.193, 1.171, 1.148, 1.127, 1.109, 1.092, 1.077, 1.061, 1.044, 1.033, 1.027, 1.013, 1.0];
+const CAM_S = [2.4531, 2.3564, 2.2216, 2.0872, 1.9784, 1.8949, 1.8317, 1.7844, 1.7471, 1.7138, 1.6804, 1.6473, 1.6158, 1.586, 1.5578, 1.531, 1.5056, 1.4814, 1.4583, 1.4363, 1.4151, 1.3949, 1.3754, 1.3567, 1.3388, 1.3214, 1.3048, 1.2734, 1.2443, 1.2173, 1.1923, 1.1692, 1.1477, 1.1277, 1.1092, 1.0919, 1.0759, 1.061, 1.0471, 1.0341, 1.022, 1.0107, 1];
 
 /**
  * 背景从暗棕里渐显：画面 = (1−a)·暗棕 + a·背景，同时由虚变实。
@@ -150,7 +151,7 @@ const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 const ease = Easing.out(Easing.cubic);
 
 function curve(t: number, ks: number[], vs: number[]): number {
-  return interpolate(t, ks, vs, clamp);
+  return smoothTrack(t, ks, vs);
 }
 
 /** 按原片 10 个字的节奏，把第 i 个字（共 n 个）的浮现时间插值出来 */
@@ -218,7 +219,9 @@ const TitleScene: React.FC<NewsHeadlineProps & { frame: number; mask: string | n
   const S = curve(t, CAM_K, CAM_S);
   const a = curve(t, FADE_K, FADE_A);
   const sigma = curve(t, BLUR_K, BLUR_S) / S; // 实测是画面上的 σ，舞台被放大了 S 倍
-  const margin = Math.ceil(sigma * 3);
+  // 虚化时四周往外多铺一圈（3σ），免得边缘被模糊成黑边。按比例连续放大，不能按整像素加边——
+  // 那样模糊每变小一格图片就突然缩一下，拉远的时候背景一帧快一帧慢
+  const bleed = (720 + 6 * sigma) / 720;
   const glyphs = Array.from(p.title);
   const maskStyle: React.CSSProperties = p.mask
     ? { WebkitMaskImage: `url(${p.mask})`, maskImage: `url(${p.mask})`, WebkitMaskSize: '100% 100%', maskSize: '100% 100%' }
@@ -227,15 +230,15 @@ const TitleScene: React.FC<NewsHeadlineProps & { frame: number; mask: string | n
   return (
     <AbsoluteFill style={{ ...maskStyle }}>
       <AbsoluteFill style={{ transformOrigin: '640px 0px', transform: `scale(${S})` }}>
-        {/* 背景：虚化时四周往外多铺一圈，免得边缘被模糊成黑边 */}
         <Media
           src={p.image}
           style={{
             position: 'absolute',
-            left: -margin,
-            top: -margin,
-            width: 1280 + margin * 2,
-            height: 720 + margin * 2,
+            left: 0,
+            top: 0,
+            width: 1280,
+            height: 720,
+            transform: bleed > 1 ? `scale(${bleed.toFixed(5)})` : undefined,
             filter: sigma > 0.05 ? `blur(${sigma.toFixed(2)}px)` : undefined,
           }}
         />

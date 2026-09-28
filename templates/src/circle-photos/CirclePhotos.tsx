@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
 
@@ -46,7 +47,7 @@ const CAM_T = [0, 8, 14, 20, 26, 32, 38, 44, 50, 56, 62, 68, 74, 80, 86, 92, 98,
 const CAM_S = [1, 0.997, 0.9925, 0.988, 0.982, 0.976, 0.9686, 0.9626, 0.9551, 0.9491, 0.9417, 0.9372, 0.9312, 0.9282, 0.9252, 0.9222, 0.9192, 0.9177, 0.9177];
 
 export function cameraScale(frame: number): number {
-  return interpolate(frame, CAM_T, CAM_S, clamp);
+  return smoothTrack(frame, CAM_T, CAM_S);
 }
 
 /** 一张圆落下来：y 偏移（负数 = 还在上面）和透明度 */
@@ -83,7 +84,7 @@ const Circle: React.FC<{ item: CircleItem; slot: Slot; frame: number }> = ({ ite
   const { x, y, r } = slot;
   const size = r * 0.27;
   return (
-    <div style={{ position: 'absolute', left: x - r, top: y - r + dy, width: r * 2, height: r * 2, opacity }}>
+    <div style={{ position: 'absolute', left: x - r, top: y - r, width: r * 2, height: r * 2, opacity, transform: `translateY(${dy.toFixed(2)}px)` }}>
       <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', boxShadow: '12px 16px 24px rgba(0,0,0,0.42)' }} />
       <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', overflow: 'hidden', backgroundColor: '#111' }}>
         <Media src={item.image} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />

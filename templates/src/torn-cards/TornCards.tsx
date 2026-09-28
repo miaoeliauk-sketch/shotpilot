@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl, bundledUrl } from '../asset';
 import { Media } from '../media';
 
@@ -55,7 +56,7 @@ export function cardPose(i: number, cards: Card[], frame: number): { x: number; 
   if (next) {
     const te = frame - (next.at - EXIT.lead);
     if (te >= EXIT_T[EXIT_T.length - 1]!) return null;
-    x -= interpolate(te, EXIT_T, EXIT_D, clamp);
+    x -= smoothTrack(te, EXIT_T, EXIT_D);
   }
   return { x, y, rot };
 }
@@ -73,8 +74,9 @@ export const TornCards: React.FC<TornCardsProps> = (p) => {
           <div
             key={i}
             style={{
-              position: 'absolute', left: pose.x - c.size / 2, top: pose.y - c.size / 2, width: c.size, height: c.size,
-              transform: `rotate(${pose.rot.toFixed(3)}deg)`,
+              // 位置放在 transform 里：left/top 会被浏览器取整到整像素，慢慢移动时一顿一顿的
+              position: 'absolute', left: 0, top: 0, width: c.size, height: c.size,
+              transform: `translate(${(pose.x - c.size / 2).toFixed(2)}px, ${(pose.y - c.size / 2).toFixed(2)}px) rotate(${pose.rot.toFixed(3)}deg)`,
             }}
           >
             <div style={{ position: 'absolute', inset: 0, backgroundColor: '#f6f6f6', WebkitMaskImage: mask, maskImage: mask, WebkitMaskSize: '100% 100%', maskSize: '100% 100%' }}>

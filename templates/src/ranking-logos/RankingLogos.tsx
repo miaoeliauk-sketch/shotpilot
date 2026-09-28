@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 
 /**
@@ -66,24 +67,24 @@ const DROP_Y = [-460, -310, -163, -78, -29, 0, 16, 25, 26];
  */
 export function flip(frame: number) {
   const none = { y: 0, z: 0, bandTop: 0, bandBot: 0, fold: 0, angle: 0 };
-  if (frame < 8) return { ...none, mode: 'back' as const, y: interpolate(frame, FLIP_T, FLIP_Y, clamp), z: interpolate(frame, FLIP_T, FLIP_Z, clamp) };
-  if (frame < 10.6) return { ...none, mode: 'band' as const, bandTop: interpolate(frame, BAND_T, BAND_TOP, clamp), bandBot: interpolate(frame, BAND_T, BAND_BOT, clamp) };
-  if (frame < 15) return { ...none, mode: 'flap' as const, fold: interpolate(frame, FLAP_T, FLAP_X, clamp), angle: interpolate(frame, FLAP_T, FLAP_A, clamp) };
+  if (frame < 8) return { ...none, mode: 'back' as const, y: smoothTrack(frame, FLIP_T, FLIP_Y), z: smoothTrack(frame, FLIP_T, FLIP_Z) };
+  if (frame < 10.6) return { ...none, mode: 'band' as const, bandTop: smoothTrack(frame, BAND_T, BAND_TOP), bandBot: smoothTrack(frame, BAND_T, BAND_BOT) };
+  if (frame < 15) return { ...none, mode: 'flap' as const, fold: smoothTrack(frame, FLAP_T, FLAP_X), angle: smoothTrack(frame, FLAP_T, FLAP_A) };
   return { ...none, mode: 'flat' as const };
 }
 
 export function boardPan(frame: number): number {
-  return interpolate(frame, PAN_T, PAN_X, clamp);
+  return smoothTrack(frame, PAN_T, PAN_X);
 }
 
 /** 推走时排行榜往下移多少（从 pushAt 起算） */
 export function pushDown(rel: number): number {
-  return interpolate(rel, PUSH_T, PUSH_Y, clamp);
+  return smoothTrack(rel, PUSH_T, PUSH_Y);
 }
 
 /** 第一个 logo 落下来的位置（从 pushAt 起算） */
 export function dropIn(rel: number): number {
-  return interpolate(rel, DROP_T, DROP_Y, clamp);
+  return smoothTrack(rel, DROP_T, DROP_Y);
 }
 
 /** 蓝条长度：最高分 560，其余按比例（底数取最低分往下再让出一段，最低的约 310） */

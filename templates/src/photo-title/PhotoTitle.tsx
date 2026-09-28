@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, interpolate, random, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { Media } from '../media';
 
 /**
@@ -75,7 +76,7 @@ const OPEN_X = [640, 640.3, 641.4, 643.5, 645.9, 648.8, 652.6, 657.2, 662.6, 668
 const OPEN_Y = [360, 360, 360, 360.1, 360.1, 360.1, 360.1, 360.1, 360.1, 360.1, 360.3, 360.1, 359, 357.8, 355.3, 353.6, 351.8, 350, 348.3, 346.6];
 
 export function openCamera(rel: number) {
-  return { s: interpolate(rel, OPEN_T, OPEN_S, clamp), x: interpolate(rel, OPEN_T, OPEN_X, clamp), y: interpolate(rel, OPEN_T, OPEN_Y, clamp) };
+  return { s: smoothTrack(rel, OPEN_T, OPEN_S), x: smoothTrack(rel, OPEN_T, OPEN_X), y: smoothTrack(rel, OPEN_T, OPEN_Y) };
 }
 
 const FLASH_T = [-3, -2, -1, 0, 1, 2, 3, 4, 6];
@@ -149,7 +150,7 @@ export const PhotoTitle: React.FC<PhotoTitleProps> = (p) => {
           <Smear t={t - T.english2} style={{ left: 150, top: 538, fontSize: 28, color: '#6f6f6f', fontWeight: 700, font: LATIN_SERIF, filter: 'blur(0.7px)' }}>{p.english2}</Smear>
           {/* 细线：方点当笔尖，从右往左画 */}
           {t >= RULE_T[0]! && (() => {
-            const pen = interpolate(t, RULE_T, RULE_X, clamp);
+            const pen = smoothTrack(t, RULE_T, RULE_X);
             return (
               <>
                 <div style={{ position: 'absolute', left: pen, top: 605, width: 10, height: 10, backgroundColor: '#222' }} />
@@ -186,7 +187,7 @@ const Smear: React.FC<{ t: number; style: SmearStyle; children: React.ReactNode 
   return (
     <>
       {layers.map((k) => (
-        <div key={k} style={{ ...base, opacity: (0.1 * (1 - q) + 0.03) * Math.min(1, t / 3) / Math.abs(k), marginTop: k * spread * 0.5, filter: `blur(${(3 * (1 - q)).toFixed(2)}px)` }}>{children}</div>
+        <div key={k} style={{ ...base, opacity: (0.1 * (1 - q) + 0.03) * Math.min(1, t / 3) / Math.abs(k), transform: `translateY(${(k * spread * 0.5).toFixed(2)}px)${base.transform ? ` ${base.transform}` : ''}`, filter: `blur(${(3 * (1 - q)).toFixed(2)}px)` }}>{children}</div>
       ))}
       <div style={{ ...base, opacity: q, filter: [style.filter, q < 1 ? `blur(${(4 * (1 - q)).toFixed(2)}px)` : ''].filter(Boolean).join(' ') || undefined }}>{children}</div>
     </>

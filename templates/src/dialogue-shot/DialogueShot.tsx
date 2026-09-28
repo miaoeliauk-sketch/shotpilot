@@ -173,8 +173,9 @@ const Bubble: React.FC<{ spec: BubbleSpec; state: BubbleState; style: DialogueSh
       style={{
         position: 'absolute',
         left: spec.x,
-        top: spec.y + state.dy,
-        transform: 'translate(-50%, -50%)',
+        top: spec.y,
+        // 上下飞用 transform（left/top 会按整像素走，慢的时候一顿一顿）
+        transform: `translate(-50%, -50%) translateY(${state.dy.toFixed(2)}px)`,
         opacity: state.opacity,
         filter: state.blur > 0.05 ? `blur(${state.blur}px)` : undefined,
       }}

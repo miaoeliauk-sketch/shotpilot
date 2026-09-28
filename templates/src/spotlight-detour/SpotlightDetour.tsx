@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, interpolate, random, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { Media } from '../media';
 import { measure } from '../text-layout';
 import { vignetteGradient } from '../lens';
@@ -71,11 +72,11 @@ export const LABELS = [
 ];
 
 export function sceneACamera(t: number) {
-  return { s: interpolate(t, A_T, A_S, clamp), x: interpolate(t, A_T, A_X, clamp), y: interpolate(t, A_T, A_Y, clamp) };
+  return { s: smoothTrack(t, A_T, A_S), x: smoothTrack(t, A_T, A_X), y: smoothTrack(t, A_T, A_Y) };
 }
 
 export function panOffset(t: number): number {
-  return interpolate(t, PAN_T, PAN_Y, clamp);
+  return smoothTrack(t, PAN_T, PAN_Y);
 }
 
 export const SpotlightDetour: React.FC<SpotlightDetourProps> = (p) => {
@@ -117,8 +118,8 @@ const GridPaper: React.FC = () => (
 
 /** 场景一（世界坐标 = 镜头 1 倍时的画面坐标） */
 const SceneA: React.FC<{ p: SpotlightDetourProps; frame: number }> = ({ p, frame }) => {
-  const rot = interpolate(frame, SPIN_T, SPIN_R, clamp);
-  const own = interpolate(frame, SPIN_T, SPIN_S, clamp);
+  const rot = smoothTrack(frame, SPIN_T, SPIN_R);
+  const own = smoothTrack(frame, SPIN_T, SPIN_S);
   const leftU = Easing.out(Easing.cubic)(interpolate(frame, [p.leftAt, p.leftAt + 14], [0, 1], clamp));
   const rightU = Easing.out(Easing.cubic)(interpolate(frame, [p.rightAt, p.rightAt + 14], [0, 1], clamp));
   return (
@@ -179,8 +180,8 @@ const SideWord: React.FC<{ text: string; side: 'left' | 'right'; u: number }> = 
   return (
     <div
       style={{
-        position: 'absolute', left: x0 + dx, top: 377 - size * 0.62, height: size * 1.2, lineHeight: `${size * 1.2}px`, whiteSpace: 'pre', fontFamily: SERIF, fontWeight: 900, fontSize: size,
-        transform: `scaleX(${squeeze}) skewX(-6deg)`, transformOrigin: '0 50%', filter: `${blur > 0.2 ? `blur(${blur.toFixed(1)}px) ` : ''}drop-shadow(0 0 10px rgba(255,40,40,0.55))`,
+        position: 'absolute', left: x0, top: 377 - size * 0.62, height: size * 1.2, lineHeight: `${size * 1.2}px`, whiteSpace: 'pre', fontFamily: SERIF, fontWeight: 900, fontSize: size,
+        transform: `translateX(${dx.toFixed(2)}px) scaleX(${squeeze}) skewX(-6deg)`, transformOrigin: '0 50%', filter: `${blur > 0.2 ? `blur(${blur.toFixed(1)}px) ` : ''}drop-shadow(0 0 10px rgba(255,40,40,0.55))`,
         color: 'transparent', backgroundImage: 'linear-gradient(to bottom, #ff3b3b, #d4101a 60%, #9e0a12)', WebkitBackgroundClip: 'text', backgroundClip: 'text',
       }}
     >

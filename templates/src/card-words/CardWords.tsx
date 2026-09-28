@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Img, interpolate, Sequence, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { bakeBlurredImage, useBaked } from '../baked';
 import { HALFTONE, HalftoneWord } from '../halftone-word';
@@ -68,11 +69,11 @@ export const WORD = { maxSize: 227, maxWidth: 997, baseline: 450, cx: 636, grow:
 
 /** 卡片在画面上的中心、旋转、缩放（不含往下移） */
 export function cardPose(frame: number) {
-  const s = frame < 53 ? ENTR_S : interpolate(frame, ZOOM_T, ZOOM_S, clamp);
+  const s = frame < 53 ? ENTR_S : smoothTrack(frame, ZOOM_T, ZOOM_S);
   const k = s / ENTR_S;
   const ex = interpolate(frame, ENTR_XT, ENTR_X, clamp);
-  const ey = interpolate(frame, ENTR_T, ENTR_Y, clamp);
-  return { x: 640 + k * (ex - 640), y: 360 + k * (ey - 360), rot: interpolate(frame, ENTR_T, ENTR_R, clamp), s };
+  const ey = smoothTrack(frame, ENTR_T, ENTR_Y);
+  return { x: 640 + k * (ex - 640), y: 360 + k * (ey - 360), rot: smoothTrack(frame, ENTR_T, ENTR_R), s };
 }
 
 /** 往下看：整张卡往上移多少（负数），推近到底时卡片底边停在 PAN_BOTTOM；卡片矮就不用移 */
@@ -81,12 +82,12 @@ export function panY(frame: number, cardHeight: number): number {
   const kEnd = sEnd / ENTR_S;
   const bottom = 360 + kEnd * (ENTR_Y[ENTR_Y.length - 1]! - 360) + (sEnd * cardHeight) / 2;
   const total = Math.min(0, PAN_BOTTOM - bottom);
-  return total * interpolate(frame, PAN_T, PAN_U, clamp);
+  return total * smoothTrack(frame, PAN_T, PAN_U);
 }
 
 /** 右边滑进来的暗影往右偏了多少（0 = 到位） */
 export function shadeOffset(frame: number): number {
-  return interpolate(frame, SHADE_T, SHADE_OFF, clamp);
+  return smoothTrack(frame, SHADE_T, SHADE_OFF);
 }
 
 /** 溶解：卡片上亮度为 lum（0–255）的像素在 dissolve 开始后第 t 帧还剩多少 */

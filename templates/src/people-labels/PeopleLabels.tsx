@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
@@ -37,10 +38,10 @@ const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' } as const;
 
 export const PEOPLE = { x0: 345, y0: 180, x1: 895, y1: 600 };
 export const CARD_SLOTS = [
-  { x: 302, y: 240, w: 254, h: 192 },
+  { x: 232, y: 240, w: 254, h: 192 }, // 往左让开左边那个人的头（头在 x 453–615），两个字都露出来
   { x: 502, y: 135, w: 203, h: 123 },
 ];
-export const LABEL_SLOTS = { left: { x: 145, y: 391 }, right: { x: 1102, y: 383 }, top: { x: 620, y: 44 } } as const;
+export const LABEL_SLOTS = { left: { x: 122, y: 391 }, right: { x: 1102, y: 383 }, top: { x: 620, y: 44 } } as const;
 const LOGO = 156;
 
 const CAM_T = [0, 6, 14, 22, 26, 31, 36, 46, 56, 76, 96, 108, 122, 140];
@@ -49,7 +50,7 @@ const CAM_X = [512, 512, 542, 609, 616, 631, 638, 640, 640, 640, 640, 640, 640, 
 const CAM_Y = [412, 412, 399, 379, 371, 365, 362, 360, 360, 360, 360, 360, 360, 360];
 
 export function camera(frame: number) {
-  return { s: interpolate(frame, CAM_T, CAM_S, clamp), x: interpolate(frame, CAM_T, CAM_X, clamp), y: interpolate(frame, CAM_T, CAM_Y, clamp) };
+  return { s: smoothTrack(frame, CAM_T, CAM_S), x: smoothTrack(frame, CAM_T, CAM_X), y: smoothTrack(frame, CAM_T, CAM_Y) };
 }
 
 /** 元素淡进来：从虚到实，10 帧 */
@@ -105,7 +106,7 @@ export const PeopleLabels: React.FC<PeopleLabelsProps> = (p) => {
 const Card: React.FC<{ card: IdCard; slot: { x: number; y: number; w: number; h: number }; u: number }> = ({ card, slot, u }) => {
   if (u <= 0 || !card.title) return null;
   const big = slot.h > 150;
-  const size = big ? 104 : 72;
+  const size = big ? 98 : 72;
   return (
     <div
       style={{

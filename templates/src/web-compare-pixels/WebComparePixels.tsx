@@ -71,8 +71,8 @@ export const CELLS = {
   colors: ['#dcdcfa', '#d4f6ec'],
 };
 export const PIXELS = [
-  { x: 141.5, y: 505.5, textBase: 594, pill: { x0: 133, x1: 430, y0: 625, y1: 700 }, top: 411, topRate: 1.5, bottom: 423, text: 424, pillAt: 466, border: '#c9938a', fill: ['#3a2f2c', '#1d1a19'] },
-  { x: 672, y: 502, textBase: 592, pill: { x0: 662, x1: 959, y0: 623, y1: 698 }, top: 362, topRate: 1.3, bottom: 372, text: 372, pillAt: 561, border: '#3a44dc', fill: ['#22232f', '#1a1b24'] },
+  { x: 141.5, y: 505.5, textBase: 601, pill: { x0: 133, x1: 430, y0: 625, y1: 700 }, top: 411, topRate: 1.5, bottom: 423, text: 424, pillAt: 466, border: '#c9938a', fill: ['#3a2f2c', '#1d1a19'] },
+  { x: 672, y: 502, textBase: 599, pill: { x0: 662, x1: 959, y0: 623, y1: 698 }, top: 362, topRate: 1.3, bottom: 372, text: 372, pillAt: 561, border: '#3a44dc', fill: ['#22232f', '#1a1b24'] },
 ] as const;
 export const SQUARE = { pitch: 43.7, size: 19, rowGap: 36.5, cols: 7 };
 export const PIXEL_TEXT = { size: 58, spacing: 0, sx: 1.12, color: '#8b8b8b' };

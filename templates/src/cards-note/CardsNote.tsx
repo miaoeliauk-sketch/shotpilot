@@ -75,7 +75,7 @@ export const CardsNote: React.FC<CardsNoteProps> = (p) => {
         {p.cards.slice(0, 2).map((c, i) => {
           const pos = CARD_POS[i]!;
           return (
-            <div key={i} style={{ position: 'absolute', left: pos.x - CARD.width / 2, top: pos.y + bob - CARD.height / 2, width: CARD.width, height: CARD.height }}>
+            <div key={i} style={{ position: 'absolute', left: pos.x - CARD.width / 2, top: pos.y - CARD.height / 2, width: CARD.width, height: CARD.height, transform: `translateY(${bob.toFixed(2)}px)` }}>
               <PersonCard card={c} t={999} seed={`n${i}`} />
             </div>
           );
@@ -92,7 +92,7 @@ export const CardsNote: React.FC<CardsNoteProps> = (p) => {
           <div
             key={li}
             style={{
-              position: 'absolute', left: NOTE.left + drift, top: NOTE.firstTop + li * NOTE.lineHeight, height: NOTE.lineHeight, lineHeight: `${NOTE.lineHeight}px`, whiteSpace: 'pre',
+              position: 'absolute', left: NOTE.left, top: NOTE.firstTop + li * NOTE.lineHeight, transform: `translateX(${drift.toFixed(2)}px)`, height: NOTE.lineHeight, lineHeight: `${NOTE.lineHeight}px`, whiteSpace: 'pre',
               fontFamily: latin ? LATIN : SANS, fontStyle: latin ? 'italic' : 'normal', fontWeight: 400, fontSize: NOTE.size, color: '#2b2b2b',
             }}
           >

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { Media } from '../media';
 import { measure } from '../text-layout';
@@ -53,7 +54,7 @@ const CAM_EXIT = 266;
 
 export function cameraScale(frame: number, exitAt: number): number {
   const t = frame <= exitAt ? (frame * CAM_EXIT) / Math.max(1, exitAt) : CAM_EXIT + (frame - exitAt);
-  return interpolate(t, CAM_T, CAM_S, clamp);
+  return smoothTrack(t, CAM_T, CAM_S);
 }
 
 /** 打到第几个字（可以是小数：最后一个字正在弹出来） */
@@ -72,10 +73,10 @@ const EXIT_S = [1, 1.011, 1.018, 1.029, 1.054, 1.076, 1.099, 1.112, 1.118, 1.12]
 export function exitPose(frame: number, exitAt: number) {
   const t = frame - exitAt;
   return {
-    dx: interpolate(t, EXIT_T, EXIT_X, clamp),
-    dy: interpolate(t, EXIT_T, EXIT_Y, clamp),
-    rot: interpolate(t, EXIT_T, EXIT_R, clamp),
-    s: interpolate(t, EXIT_T, EXIT_S, clamp),
+    dx: smoothTrack(t, EXIT_T, EXIT_X),
+    dy: smoothTrack(t, EXIT_T, EXIT_Y),
+    rot: smoothTrack(t, EXIT_T, EXIT_R),
+    s: smoothTrack(t, EXIT_T, EXIT_S),
     opacity: interpolate(t, [42, 48], [1, 0], clamp),
   };
 }

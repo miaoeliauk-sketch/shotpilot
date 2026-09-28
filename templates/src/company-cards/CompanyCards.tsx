@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, Easing, interpolate, random, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { inkBox } from '../big-number/BigNumber';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { Media } from '../media';
@@ -71,7 +72,7 @@ function baselineInLineBox(font: string, lineBox: number): number {
 }
 
 function titleScale(frame: number): number {
-  if (frame < JUMP.at) return interpolate(frame, CAM_T, CAM_S, clamp);
+  if (frame < JUMP.at) return smoothTrack(frame, CAM_T, CAM_S);
   return JUMP.from + (frame - JUMP.at) * JUMP.perFrame;
 }
 
@@ -79,8 +80,8 @@ export const CompanyCards: React.FC<CompanyCardsProps> = (p) => {
   const frame = useCurrentFrame();
   const barlow = useBundledFont('barlow');
   const vibes = useBundledFont('vibes');
-  const whip = interpolate(frame - p.whipAt, WHIP_T, WHIP_D, clamp);
-  const speed = Math.abs(interpolate(frame - p.whipAt + 1, WHIP_T, WHIP_D, clamp) - whip);
+  const whip = smoothTrack(frame - p.whipAt, WHIP_T, WHIP_D);
+  const speed = Math.abs(smoothTrack(frame - p.whipAt + 1, WHIP_T, WHIP_D) - whip);
   const blurX = Math.min(40, speed * 0.25);
 
   const fit = useMemo(() => {
@@ -183,7 +184,7 @@ const CardsScene: React.FC<{ p: CompanyCardsProps; frame: number; bgOffset: numb
         const dx = i === 0 ? 731 * 2 ** (-(frame - landAt + 2) / 5.8) : 60 * 2 ** (-t / 12);
         const q = i === 0 ? 1 : interpolate(t, [0, 4], [0, 1], clamp);
         return (
-          <div key={i} style={{ position: 'absolute', left: target.x + dx - CARD.width / 2, top: target.y + bob - CARD.height / 2, width: CARD.width, height: CARD.height, opacity: q }}>
+          <div key={i} style={{ position: 'absolute', left: target.x - CARD.width / 2, top: target.y - CARD.height / 2, width: CARD.width, height: CARD.height, opacity: q, transform: `translate(${dx.toFixed(2)}px, ${bob.toFixed(2)}px)` }}>
             <PersonCard card={c} t={t} seed={`card${i}`} />
           </div>
         );

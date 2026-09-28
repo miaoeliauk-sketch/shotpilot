@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { useBaked } from '../baked';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
@@ -72,7 +73,7 @@ const DRIFT_Y = [0, 2, 4, 4, 4, 2, -4, -10, -13, -12, -14];
 
 /** 镜头往下甩：世界往上移了多少 */
 export function cameraY(frame: number): number {
-  return interpolate(frame, CAM_T, CAM_Y, clamp);
+  return smoothTrack(frame, CAM_T, CAM_Y);
 }
 
 /** 入场：起始偏移按指数衰减 */
@@ -90,7 +91,7 @@ export function typedCount(frame: number, at: number, total: number, frames?: nu
 
 /** 表格停下后的漂移 */
 export function drift(frame: number): [number, number] {
-  return [interpolate(frame, DRIFT_T, DRIFT_X, clamp), interpolate(frame, DRIFT_T, DRIFT_Y, clamp)];
+  return [smoothTrack(frame, DRIFT_T, DRIFT_X), smoothTrack(frame, DRIFT_T, DRIFT_Y)];
 }
 
 /**
@@ -173,7 +174,8 @@ const CutoutImg: React.FC<{ c: Cutout; off: [number, number]; blur?: number; sca
     <Img
       src={assetUrl(c.image)}
       style={{
-        position: 'absolute', left: c.x + off[0], top: c.y + off[1], width: c.width * scale, height: 'auto',
+        position: 'absolute', left: c.x, top: c.y, width: c.width, height: 'auto', transformOrigin: '0 0',
+        transform: `translate(${off[0].toFixed(2)}px, ${off[1].toFixed(2)}px)${scale !== 1 ? ` scale(${scale.toFixed(4)})` : ''}`,
         filter: `${blur > 0.3 ? `blur(${blur.toFixed(1)}px) ` : ''}drop-shadow(-6px 10px 10px rgba(0,0,0,0.28))`,
       }}
     />
@@ -226,7 +228,7 @@ const LEAD_Y = [-80, -80, -72, -55, -45, -35, -28, -24, -21, -16, -10, -3, 0];
 
 /** 镜头下甩时装饰图比表格往上多走了多少 */
 export function floatLead(frame: number): number {
-  return interpolate(frame, LEAD_T, LEAD_Y, clamp);
+  return smoothTrack(frame, LEAD_T, LEAD_Y);
 }
 
 const Floater: React.FC<{ c: Cutout; cx: number; cy: number; width: number; blur: number }> = ({ c, cx, cy, width, blur }) =>

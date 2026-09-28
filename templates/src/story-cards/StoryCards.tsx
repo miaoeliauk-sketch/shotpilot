@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 
 /**
@@ -50,7 +51,7 @@ const CAM_Y = [367, 397, 427.8, 458.7, 499.5, 536, 571.3, 597.4, 621.9, 614, 601
 /** 镜头：世界点 (640, 360) 在屏幕上的位置和缩放；exit = 从哪一帧起用结尾的甩走（原片 380） */
 export function camera(frame: number, exitAt: number) {
   const t = frame < exitAt ? Math.min(frame, 379) : 380 + (frame - exitAt);
-  return { s: interpolate(t, CAM_T, CAM_S, clamp), x: interpolate(t, CAM_T, CAM_X, clamp), y: interpolate(t, CAM_T, CAM_Y, { extrapolateLeft: 'clamp', extrapolateRight: 'extend' }) };
+  return { s: smoothTrack(t, CAM_T, CAM_S), x: smoothTrack(t, CAM_T, CAM_X), y: smoothTrack(t, CAM_T, CAM_Y, true) };
 }
 
 /** 卡片滑进来的进度 */

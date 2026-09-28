@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { measure } from '../text-layout';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
@@ -59,7 +60,7 @@ export function cameraScale(frame: number): number {
 export function mergePose(frame: number, mergeAt: number) {
   const t = frame - mergeAt;
   const u = interpolate(t, [0, 28], [0, 1], clamp);
-  return { dx: interpolate(t, MERGE_T, MERGE_X, clamp), dy: 26 * Easing.inOut(Easing.cubic)(u), rot: -6 * Easing.inOut(Easing.cubic)(interpolate(t, [4, 22], [0, 1], clamp)) };
+  return { dx: smoothTrack(t, MERGE_T, MERGE_X), dy: 26 * Easing.inOut(Easing.cubic)(u), rot: -6 * Easing.inOut(Easing.cubic)(interpolate(t, [4, 22], [0, 1], clamp)) };
 }
 
 /** 中间那句中文打到第几个字 */
@@ -113,7 +114,7 @@ export const PosterPair: React.FC<PosterPairProps> = (p) => {
         {in2 > 0 && (
           <PosterCard
             poster={p.right}
-            style={{ left: CARDS.right.x + m.dx, top: CARDS.right.y + m.dy, opacity: in2, transform: `scale(${(1.06 - 0.06 * in2).toFixed(3)})` }}
+            style={{ left: CARDS.right.x, top: CARDS.right.y, opacity: in2, transform: `translate(${m.dx.toFixed(2)}px, ${m.dy.toFixed(2)}px) scale(${(1.06 - 0.06 * in2).toFixed(3)})` }}
           />
         )}
         {/* 右边一行行大字 */}

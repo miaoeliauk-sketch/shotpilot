@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { Media } from '../media';
 import { measure } from '../text-layout';
@@ -65,12 +66,12 @@ const NUMBER = { left: 392, top: 40, size: 393, squeeze: 0.7 };
 const LABEL = { left: 625, baseline: 338, size: 105, squeeze: 0.61 };
 
 export function docPose(frame: number, docOutAt: number) {
-  const out = interpolate(frame - docOutAt, OUT_T, OUT_X, clamp);
+  const out = smoothTrack(frame - docOutAt, OUT_T, OUT_X);
   return {
-    x: interpolate(frame, IN_T, IN_X, clamp) + out,
-    y: interpolate(frame, IN_T, IN_Y, clamp),
-    rot: interpolate(frame, IN_T, IN_R, clamp),
-    s: interpolate(frame, IN_T, IN_S, clamp),
+    x: smoothTrack(frame, IN_T, IN_X) + out,
+    y: smoothTrack(frame, IN_T, IN_Y),
+    rot: smoothTrack(frame, IN_T, IN_R),
+    s: smoothTrack(frame, IN_T, IN_S),
     blur: interpolate(frame - docOutAt, [-6, 18], [0, 12], clamp),
   };
 }

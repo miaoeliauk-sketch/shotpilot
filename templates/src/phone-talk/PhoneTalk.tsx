@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 
 /**
@@ -55,11 +56,11 @@ const TEXT_Y = [260, 168, 114, 74, 48, 30, 16, 8, 0];
 
 /** 人往下偏了多少（升上来的过程） */
 export function rise(frame: number): number {
-  return interpolate(frame, RISE_T, RISE_Y, clamp);
+  return smoothTrack(frame, RISE_T, RISE_Y);
 }
 
 export function textRise(frame: number): number {
-  return interpolate(frame, TEXT_T, TEXT_Y, clamp);
+  return smoothTrack(frame, TEXT_T, TEXT_Y);
 }
 
 /** 回复框里新打出来的字：从左往右露出来（3 帧），同时从下面 12 像素升上来（6 帧，越来越慢） */
@@ -94,12 +95,12 @@ export const PhoneTalk: React.FC<PhoneTalkProps> = (p) => {
       <AbsoluteFill style={{ background: 'radial-gradient(ellipse 820px 520px at 700px 330px, #e4e4e1 0%, #d9d9d6 55%, #bdbdba 100%)' }} />
       {/* 人 */}
       {p.person && (
-        <div style={{ position: 'absolute', left: PERSON.left, top: PERSON.top + r, height: PERSON.height }}>
+        <div style={{ position: 'absolute', left: PERSON.left, top: PERSON.top, height: PERSON.height, transform: `translateY(${r.toFixed(2)}px)` }}>
           <Img src={assetUrl(p.person)} style={{ height: PERSON.height, width: 'auto', display: 'block', filter: 'drop-shadow(-10px 6px 14px rgba(0,0,0,0.25))' }} />
         </div>
       )}
       {/* 对话框（跟着人升上来，慢一点） */}
-      <AbsoluteFill style={{ transform: `translateY(${rb.toFixed(1)}px)` }}>
+      <AbsoluteFill style={{ transform: `translateY(${rb.toFixed(2)}px)` }}>
         {p.ask && (
           <>
             <svg width={1280} height={720} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }}>
@@ -112,7 +113,7 @@ export const PhoneTalk: React.FC<PhoneTalkProps> = (p) => {
             </svg>
             <div style={{ ...box, left: ASK.x0, top: ASK.y0, width: ASK.x1 - ASK.x0, height: ASK.y1 - ASK.y0 }} />
             {nAsk > 0 && (
-              <div style={{ position: 'absolute', left: ASK.left, top: lineTop(ASK.base, ASK.size, ASK.size) + textRise(frame) - rb, whiteSpace: 'pre', fontFamily: SANS, fontWeight: 300, fontSize: ASK.size, lineHeight: `${ASK.size}px`, letterSpacing: ASK.spacing, color: '#1e1e1e' }}>
+              <div style={{ position: 'absolute', left: ASK.left, top: lineTop(ASK.base, ASK.size, ASK.size), transform: `translateY(${(textRise(frame) - rb).toFixed(2)}px)`, whiteSpace: 'pre', fontFamily: SANS, fontWeight: 300, fontSize: ASK.size, lineHeight: `${ASK.size}px`, letterSpacing: ASK.spacing, color: '#1e1e1e' }}>
                 {askChars.slice(0, nAsk).join('')}{cursor(nAsk, askChars.length)}
               </div>
             )}

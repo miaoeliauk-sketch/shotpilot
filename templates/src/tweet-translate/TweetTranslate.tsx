@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl, bundledUrl } from '../asset';
 import { TiltShift, vignetteGradient } from '../lens';
 import { measure } from '../text-layout';
@@ -101,7 +102,7 @@ export function layoutPage(paragraphs: string[], anchorParagraph: number): PageL
 }
 
 export function camera(frame: number): { x: number; y: number } {
-  return { x: interpolate(frame, CAM_T, CAM_X, clamp), y: interpolate(frame, CAM_T, CAM_Y, clamp) };
+  return { x: smoothTrack(frame, CAM_T, CAM_X), y: smoothTrack(frame, CAM_T, CAM_Y) };
 }
 
 export function wipeProgress(frame: number, at: number, frames: number): number {

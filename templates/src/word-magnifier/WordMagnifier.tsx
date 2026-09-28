@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, Img, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { assetUrl } from '../asset';
 import { BUNDLED_FONTS, useBundledFont } from '../fonts';
 import { Media } from '../media';
@@ -60,12 +61,12 @@ const FG_X = [1075, 1075, 1075, 1075, 1070, 1057.5, 1041.5, 1005.4, 947.3, 854.6
 const FG_Y = [427, 417, 394, 381, 374, 372.8, 372.7, 371.7, 370, 366.8, 364.1, 361.8, 360.9, 360.7, 360];
 
 export function bgCamera(frame: number) {
-  return { s: interpolate(frame, CAM_T, CAM_S, clamp), x: 640, y: 360 };
+  return { s: smoothTrack(frame, CAM_T, CAM_S), x: 640, y: 360 };
 }
 
 export function fgCamera(frame: number) {
   if (frame >= 70) return bgCamera(frame);
-  return { s: interpolate(frame, FG_T, FG_S, clamp), x: interpolate(frame, FG_T, FG_X, clamp), y: interpolate(frame, FG_T, FG_Y, clamp) };
+  return { s: smoothTrack(frame, FG_T, FG_S), x: smoothTrack(frame, FG_T, FG_X), y: smoothTrack(frame, FG_T, FG_Y) };
 }
 
 const camTransform = (c: { s: number; x: number; y: number }) => `translate(${(c.x - 640).toFixed(2)}px, ${(c.y - 360).toFixed(2)}px) scale(${c.s.toFixed(4)})`;
@@ -211,8 +212,9 @@ const Circle: React.FC<{ bubble: Bubble; c: { x: number; y: number; r: number };
         >
           {bubble.title}
         </div>
-        {bubble.line1 && <div style={{ ...sub, left: c.r - 23, top: c.r + 24 }}>{bubble.line1}</div>}
-        {bubble.line2 && <div style={{ ...sub, left: c.r - 110, top: c.r + 72 }}>{bubble.line2}</div>}
+        {/* 小字往下留一点，别压到大字最后一笔的尾巴 */}
+        {bubble.line1 && <div style={{ ...sub, left: c.r - 23, top: c.r + 34 }}>{bubble.line1}</div>}
+        {bubble.line2 && <div style={{ ...sub, left: c.r - 110, top: c.r + 80 }}>{bubble.line2}</div>}
       </div>
     </div>
   );

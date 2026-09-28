@@ -1,5 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from 'remotion';
+import { smoothTrack } from '../curve';
 import { Media } from '../media';
 import { vignetteGradient } from '../lens';
 import { POSTER, PosterCard, type Poster } from '../poster-card/PosterCard';
@@ -42,7 +43,7 @@ const B_S = [1.0229, 1.0207, 1.0184, 1.0164, 1.0138, 1.0105, 1.0066, 1.0037, 1, 
 /** 镜头：大字那段按「出卡片」的时间伸缩；出卡片时跳一下 */
 export function cameraScale(frame: number, cardsAt: number): number {
   if (frame < cardsAt) return interpolate((frame * 104) / Math.max(1, cardsAt), A_T, A_S, clamp);
-  return interpolate(frame - cardsAt, B_T, B_S, clamp);
+  return smoothTrack(frame - cardsAt, B_T, B_S);
 }
 
 /** 开头每个字从大缩回来（绕自己的中心），字的位置从中间往外散开一点 */
