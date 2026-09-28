@@ -90,14 +90,14 @@ export const LAYOUT = [
     label: { cx: 327, cy: 237, w: 127, h: 48, r: -0.4, size: 27, at: 164 },
     cards: [
       { cx: 241, cy: 357, w: 160, h: 185, r: -9.4, at: 196, num: 0.3 },
-      { cx: 395, cy: 353, w: 213, h: 220, r: 9.9, at: 164, num: 0.28 },
+      { cx: 405, cy: 353, w: 197, h: 220, r: 9.9, at: 164, num: 0.28 },
     ],
   },
   {
     label: { cx: 856, cy: 176, w: 212, h: 77, r: 1.2, size: 44, at: 270 },
     cards: [
       { cx: 709, cy: 368, w: 240, h: 298, r: -9.7, at: 270, num: 0.34 },
-      { cx: 984, cy: 366, w: 319, h: 375, r: 10, at: 310, num: 0.34 },
+      { cx: 994, cy: 363, w: 319, h: 375, r: 10, at: 310, num: 0.34 },
     ],
   },
 ] as const;
@@ -356,7 +356,7 @@ const Card: React.FC<{ card: StatCard; spec: (typeof LAYOUT)[number]['cards'][nu
         >
           <div style={{ position: 'absolute', inset: 0, opacity: ph.content }}>
             <Diamond x={w / 2} y={h * 0.1} size={w * 0.04} color={accent} />
-            <div style={{ position: 'absolute', left: 0, right: 0, top: h * 0.2, textAlign: 'center', fontFamily: `"${BUNDLED_FONTS.playfair.family}", serif`, fontWeight: 500, fontSize: w * 0.145, color: ink, lineHeight: 1 }}>{card.name}</div>
+            <div style={{ position: 'absolute', left: 0, right: 0, top: h * 0.2, textAlign: 'center', fontFamily: `"${BUNDLED_FONTS.playfair.family}", serif`, fontWeight: 500, fontSize: w * 0.145, color: ink, lineHeight: 1, fontVariantNumeric: 'lining-nums' }}>{card.name}</div>
             <div style={{ position: 'absolute', left: 0, right: 0, top: h * 0.35, textAlign: 'center', fontFamily: SANS, fontSize: w * 0.055, color: '#86867f', lineHeight: 1 }}>{card.sub}</div>
             <svg width={w} height={h} style={{ position: 'absolute', left: 0, top: 0, overflow: 'visible' }}>
               <text x={vx} y={h * 0.7} fontFamily={numFont} fontSize={numSize} fill={ink} letterSpacing="-0.02em">{card.value}</text>
