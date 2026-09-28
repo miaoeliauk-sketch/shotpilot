@@ -107,6 +107,8 @@ import { WebComparePixels } from './web-compare-pixels/WebComparePixels';
 import * as webComparePixels from './web-compare-pixels/params';
 import { BrainStatCards } from './brain-stat-cards/BrainStatCards';
 import * as brainStatCards from './brain-stat-cards/params';
+import { NewsPageHighlight } from './news-page-highlight/NewsPageHighlight';
+import * as newsPageHighlight from './news-page-highlight/params';
 
 /**
  * 工作台里能用的模板。
@@ -390,6 +392,11 @@ export const TEMPLATES: TemplateDef[] = [
     ...brainStatCards.meta,
     component: BrainStatCards,
     toProps: (p) => brainStatCards.toProps(p as unknown as brainStatCards.BrainStatCardsParams),
+  },
+  {
+    ...newsPageHighlight.meta,
+    component: NewsPageHighlight,
+    toProps: (p) => newsPageHighlight.toProps(p as unknown as newsPageHighlight.NewsPageHighlightParams),
   },
 ];
 

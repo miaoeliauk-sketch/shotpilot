@@ -281,6 +281,7 @@ pnpm compare --rendered out.mp4 --original clip.mp4 --diff diff.mp4
 | [`title-score-table`](templates/src/title-score-table/) | 8 秒：灰纸上大小错落的宋体大标题从四面滑进来、红色英文一个个字母打出来，两边装饰图升上来；镜头往下甩到三行分数表，名字和分数一行行打出来，最后两格刷黄 | SSIM 0.828 |
 | [`web-compare-pixels`](templates/src/web-compare-pixels/) | 22.6 秒：网页长截图从柱状图特写拉远、上移到页首推近，一甩斜切进暗场；两行对比表一格格长出来、字一个个打出来，镜头推近、左边渐虚；下面两个像素方块标签（赢几项涂几个橙色），再浮上来两个胶囊 | SSIM 0.896 |
 | [`brain-stat-cards`](templates/src/brain-stat-cards/) | 14.2 秒：灰纸上一张图（原片是大脑）转着推近，粗斜体英文和斜体大字打出来，两条对话标签飞进来打字、垂线到黑球；镜头往下甩，四张深色数据卡片先是毛玻璃再显影，最后拉远看全；整幅盖一层细布纹 | SSIM 0.873 |
+| [`news-page-highlight`](templates/src/news-page-highlight/) | 4.2 秒：新闻网页，镜头从标题开头往右扫过去、越扫越慢，标题区从下往上收掉，下面一行大字滚上来，硬切推近到其中一段，黄色荧光笔从左往右涂过去；屏幕网格、重暗角、边上红蓝错色 | SSIM 0.870 |
 
 每个案例都记录了每一轮迭代的分数、踩过的坑，以及怎么换成你自己的内容。
 
